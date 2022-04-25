@@ -3,6 +3,8 @@ import numpy as np
 from datetime import datetime
 from calendar import monthrange
 
+from teiaUtils.teiaUser import TeiaUser
+
 
 def print_info(info):
     """Prints some information with a time stamp added.
@@ -181,3 +183,178 @@ def get_counts_per_day(timestamps, first_year=2021, first_month=3, first_day=1):
                         month == now.month) and (day == now.day)
 
     return counts_per_day
+
+
+def get_objkt_creators(transactions):
+    """Returns a dictionary with the OBJKT creators from a list of mint
+    transactions.
+
+    Parameters
+    ----------
+    transactions: list
+        The list of mint transactions.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the OBJKT creators.
+
+    """
+    objkt_creators = {}
+
+    for transaction in transactions:
+        objkt_id = transaction["parameter"]["value"]["token_id"]
+        address = transaction["initiator"]["address"]
+        objkt_creators[objkt_id] = address
+
+    return objkt_creators
+
+
+def add_mints_to_users(transactions, users={}):
+    """Adds the mint transactions information to a list of users.
+
+    Parameters
+    ----------
+    transactions: list
+        The list of mint transactions.
+    users: dict, optional
+        The users dictionary. By default an empty users dictionary.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the updated users list.
+
+    """
+    # Loop over the list of mint transactions
+    for transaction in transactions:
+        # Extract the minter address
+        address = transaction["initiator"]["address"]
+
+        # Check that it is a normal address and not a contract
+        if address.startswith("tz"):
+            # Add a new user if the address is new
+            if address not in users:
+                users[address] = TeiaUser(address)
+
+            # Add the mint transaction to the user information
+            users[address].add_mint_transaction(transaction)
+
+    return users
+
+
+def add_collects_to_users(transactions, swaps_bigmap, users={}):
+    """Adds the collect transactions information to a list of users.
+
+    Parameters
+    ----------
+    transactions: list
+        The list of collect transactions.
+    swaps_bigmap: dict
+        The marketplace swaps bigmap.
+    users: dict, optional
+        The users dictionary. By default an empty users dictionary.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the updated users list.
+
+    """
+    # Loop over the list of collect transactions
+    for transaction in transactions:
+        # Extract the collector address
+        address = transaction["sender"]["address"]
+
+        # Check that it is a normal address and not a contract
+        if address.startswith("tz"):
+            # Add a new user if the address is new
+            if address not in users:
+                users[address] = TeiaUser(address)
+
+            # Add the collect transaction to the user information
+            users[address].add_collect_transaction(transaction, swaps_bigmap)
+
+    return users
+
+
+def add_swaps_to_users(transactions, users={}):
+    """Adds the swap transactions information to a list of users.
+
+    Parameters
+    ----------
+    transactions: list
+        The list of swap transactions.
+    users: dict, optional
+        The users dictionary. By default an empty users dictionary.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the updated users list.
+
+    """
+    # Loop over the list of swap transactions
+    for transaction in transactions:
+        # Extract the swapper address
+        address = transaction["sender"]["address"]
+
+        # Check that it is a normal address and not a contract
+        if address.startswith("tz"):
+            # Add a new user if the address is new
+            if address not in users:
+                users[address] = TeiaUser(address)
+
+            # Add the swap transaction to the user information
+            users[address].add_swap_transaction(transaction)
+
+    return users
+
+
+def add_restricted_wallets_information(restricted_wallets, users):
+    """Adds the restricted wallets information to a set of users.
+
+    Parameters
+    ----------
+    restricted_wallets: list
+        The python list with the H=N and Teia restricted wallets.
+    users: dict
+        The python dictionary with the users list.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the updated users list.
+
+    """
+    for wallet in restricted_wallets:
+        if wallet in users:
+            users[wallet].set_restricted()
+
+    return users
+
+
+def add_usernames(registries_bigmap, tzprofiles, wallets, users):
+    """Adds the user names information to a set of users.
+
+    Parameters
+    ----------
+    registries_bigmap: dict
+        The H=N registries bigmap.
+    tzprofiles: dict
+        The complete tzprofiles registered users information.
+    wallets: dict
+        The complete list of tezos wallets obtained from the TzKt API.
+    users: dict
+        The python dictionary with the users list.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the updated users list.
+
+    """
+    for wallet, user in users.items():
+        user.set_usernames(registries_bigmap, tzprofiles, wallets)
+
+    return users
