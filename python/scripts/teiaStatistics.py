@@ -1,6 +1,6 @@
-import teiaUtils.analysisUtils as utis
 from teiaUtils.queryUtils import *
 from teiaUtils.plotUtils import *
+from teiaUtils.teiaUsers import TeiaUsers
 
 # Set the path to the directory where the tezos wallets information will be
 # saved to avoid to query for it again and again
@@ -18,6 +18,9 @@ exclude_last_day = True
 
 # Get the complete list of tezos wallets
 wallets = get_tezos_wallets(wallets_dir, sleep_time=10)
+
+# Get the complete list of tzprofiles
+tzprofiles = get_tzprofiles(sleep_time=1)
 
 # Get the complete list of H=N mint, collect, swap and cancel swap transactions
 hen_mints = get_all_transactions("mint", transactions_dir, sleep_time=10)
@@ -37,44 +40,37 @@ hen_registries_bigmap = get_hen_bigmap("registries", transactions_dir, sleep_tim
 hen_subjkts_metadata_bigmap = get_hen_bigmap("subjkts metadata", transactions_dir, sleep_time=10)
 
 # Get the Teia swaps bigmap
-teia_swaps_bigmap = get_teia_bigmap("swaps", transactions_dir, sleep_time=1)
+teia_swaps_bigmap = get_teia_bigmap("swaps", transactions_dir, sleep_time=10)
 
-# Get users information from the mint, collect and swap transactions
-users = {}
-users = utils.add_mints_to_users(hen_mints, users)
-users = utils.add_collects_to_users(hen_collects, hen_swaps_bigmap, users)
-users = utils.add_collects_to_users(teia_collects, teia_swaps_bigmap, users)
-users = utils.add_swaps_to_users(hen_swaps, users)
-users = utils.add_swaps_to_users(teia_swaps, users)
+# Get the hDAO ledger bigmap at a given block level
+hdao_snapshot_level = None
+hdao_ledger_bigmap = get_token_bigmap(
+    "ledger", "hDAO", transactions_dir, hdao_snapshot_level, sleep_time=1)
+
+# Get the Teia users from the mint, collect and swap transactions
+users = TeiaUsers()
+users.add_mint_transactions(hen_mints)
+users.add_collect_transactions(hen_collects, hen_swaps_bigmap, hen_royalties_bigmap)
+users.add_collect_transactions(teia_collects, teia_swaps_bigmap, hen_royalties_bigmap)
+users.add_swap_transactions(hen_swaps)
+users.add_swap_transactions(teia_swaps)
 
 # Add the restricted wallets information
 restricted_wallets = get_restricted_wallets()
-users = utils.add_restricted_wallets_information(restricted_wallets, users)
+users.add_restricted_wallets_information(restricted_wallets)
 
 # Add the user names
-users = utils.add_usernames(hen_registries_bigmap, {}, wallets, users)
+users.add_usernames(hen_registries_bigmap, tzprofiles, wallets)
 
-# Separate between artists, collectors, patrons, swappers and restricted users
-artists = {}
-collectors = {}
-patrons = {}
-swappers = {}
-restricted = {}
+# Add the hDAO snapshot information
+users.add_hdao_information(hdao_ledger_bigmap, hdao_snapshot_level)
 
-for wallet, user in users.items():
-    if user.restricted:
-        restricted[wallet] = user
-    else:
-        if user.type == "artist":
-            artists[wallet] = user
-
-            if len(user.collected_objkts) > 0:
-                collectors[wallet] = user
-        elif user.type == "patron":
-            patrons[wallet] = user
-            collectors[wallet] = user
-        elif user.type == "swapper":
-            swappers[wallet] = user
+# Select the artists, collectors, patrons, swappers and restricted users
+artists = users.select("artists").select("not_restricted")
+collectors = users.select("collectors").select("not_restricted")
+patrons = users.select("patrons").select("not_restricted")
+swappers = users.select("swappers").select("not_restricted")
+restricted = users.select("restricted")
 
 # Print some information about the total number of users
 print("There are currently %i H=N and Teia users." % (
@@ -82,7 +78,7 @@ print("There are currently %i H=N and Teia users." % (
 print("Of those %i are artists, %i are patrons and %i are swappers." % (
     len(artists), len(patrons), len(swappers)))
 print("%i artists are also collectors." % (len(collectors) - len(patrons)))
-print("%i users are in the restricted list." % len(restricted))
+print("%i wallets are in the restricted list." % len(restricted))
 
 # Plot the number of operations per day
 plot_operations_per_day(

@@ -2,14 +2,12 @@ import json
 import requests
 import time
 import os.path
-import numpy as np
 from datetime import datetime, timezone
-from calendar import monthrange
 
 import teiaUtils.analysisUtils as utils
 
 
-def get_query_result(url, parameters={}, timeout=10):
+def get_query_result(url, parameters=None, timeout=10):
     """Executes the given query and returns the result.
 
     Parameters
@@ -17,7 +15,7 @@ def get_query_result(url, parameters={}, timeout=10):
     url: str
         The url to the server API.
     parameters: dict, optional
-        The query parameters. Default is no parameters.
+        The query parameters. Default is None.
     timeout: float, optional
         The query timeout in seconds. Default is 10 seconds.
 
@@ -198,7 +196,6 @@ def get_tezos_wallets(data_dir, batch_size=10000, sleep_time=1):
         A python dictionary with the wallets information.
 
     """
-    # Download the wallets
     utils.print_info("Downloading the complete list of tezos wallets...")
     wallets = []
     counter = 0
@@ -242,8 +239,63 @@ def get_tezos_wallets(data_dir, batch_size=10000, sleep_time=1):
     return {wallet["address"]: wallet for wallet in wallets}
 
 
+def get_tzprofiles(batch_size=10000, sleep_time=1):
+    """Returns the complete list of tzprofiles ordered by their wallet.
+
+    Parameters
+    ----------
+    batch_size: int, optional
+        The maximum number of tzprofiles per API query. Default is 10000. The
+        maximum allowed by the API is 10000.
+    sleep_time: float, optional
+        The sleep time between API queries in seconds. This is used to avoid
+        being blocked by the server. Default is 1 second.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the tzprofiles information.
+
+    """
+    utils.print_info("Downloading the complete list of tzprofiles...")
+    tzprofiles = []
+    counter = 0
+
+    while True:
+        utils.print_info("Downloading batch %i" % (counter + 1))
+        url = "https://unstable-do-not-use-in-production-api.teztok.com/v1/graphql"
+        graphql_query = """query TzProfiles {
+            tzprofiles(distinct_on: account, order_by: {}, limit: %i, offset: %i) {
+                alias
+                description
+                discord
+                domain_name
+                ethereum
+                github
+                logo
+                twitter
+                website
+                contract
+                account
+            }
+        }""" % (batch_size, counter * batch_size)
+        result = get_graphql_query_result(url, {"query": graphql_query})
+        new_tzprofiles = result["data"]["tzprofiles"]
+        tzprofiles += new_tzprofiles
+
+        if len(new_tzprofiles) != batch_size:
+            break
+
+        time.sleep(sleep_time)
+        counter += 1
+
+    utils.print_info("Downloaded %i tzprofiles." % len(tzprofiles))
+
+    return {tzprofile["account"]: tzprofile for tzprofile in tzprofiles}
+
+
 def get_transactions(entrypoint, contract, offset=0, limit=10000,
-                     timestamp=None, extra_parameters={}):
+                     timestamp=None, extra_parameters=None):
     """Returns a list of applied transactions ordered by increasing time stamp.
 
     Parameters
@@ -263,7 +315,7 @@ def get_transactions(entrypoint, contract, offset=0, limit=10000,
         returned. It should follow the ISO format (e.g. 2021-04-20T00:00:00Z).
         Default is no limit.
     extra_parameters: dict, optional
-        Extra parameters to apply to the query. Default is no extra parameters.
+        Extra parameters to apply to the query. Default is None.
 
     Returns
     -------
@@ -280,7 +332,9 @@ def get_transactions(entrypoint, contract, offset=0, limit=10000,
         "limit": limit,
         "timestamp.le": timestamp
     }
-    parameters.update(extra_parameters)
+
+    if extra_parameters is not None:
+        parameters.update(extra_parameters)
 
     return get_query_result(url, parameters)
 
@@ -400,7 +454,6 @@ def get_bigmap_keys(bigmap_ids, data_dir, level=None, batch_size=10000,
         A python list with the bigmap keys.
 
     """
-    # Download the bigmap keys
     utils.print_info("Downloading bigmap keys...")
     bigmap_keys = []
     counter = 0
@@ -704,277 +757,14 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
 
     for bigmap_key in bigmap_keys:
         if isinstance(bigmap_key["key"], dict):
-            bigmap[counter] = {
-                "key": bigmap_key["key"],
-                "value": bigmap_key["value"]}
-            counter += 1
+            if name == "ledger" and token in ["hDAO", "MATERIA"]:
+                bigmap[bigmap_key["key"]["address"]] = bigmap_key["value"]
+            else:
+                bigmap[counter] = {
+                    "key": bigmap_key["key"],
+                    "value": bigmap_key["value"]}
+                counter += 1
         else:
             bigmap[bigmap_key["key"]] = bigmap_key["value"]
 
     return bigmap
-
-
-def extract_users_connections(objkt_creators, transactions, swaps_bigmap,
-                              users, objktcom_collectors, reported_users):
-    """Extracts the users connections.
-
-    Parameters
-    ----------
-    objkt_creators: dict
-        The OBJKT creators.
-    transactions: list
-        The list of collect transactions.
-    swaps_bigmap: dict
-        The H=N marketplace swaps bigmap.
-    users: dict
-        The H=N users.
-    objktcom_collectors: dict
-        The objkt.com collectors.
-    reported_users: list
-        The python list with the wallet ids of all H=N reported users.
-
-    Returns
-    -------
-    tuple
-        A python tuple with the users connections information and a serialized
-        version of it.
-
-    """
-    users_connections = {}
-    user_counter = 0
-
-    for artist_wallet_id in objkt_creators.values():
-        # Add the artists wallets, since it could be that they might not have
-        # connections from collect operations
-        if artist_wallet_id.startswith("KT"):
-            continue
-        elif artist_wallet_id not in users_connections:
-            if artist_wallet_id in users:
-                alias = users[artist_wallet_id]["alias"]
-            else:
-                alias = ""
-
-            users_connections[artist_wallet_id] = {
-                "alias": alias,
-                "artists": {},
-                "collectors": {},
-                "reported": False,
-                "counter": user_counter}
-            user_counter += 1
-
-    for transaction in transactions:
-        # Get the swap id from the collect entrypoint input parameters
-        parameters = transaction["parameter"]["value"]
-
-        if isinstance(parameters, dict):
-            swap_id = parameters["swap_id"]
-        else:
-            swap_id = parameters
-
-        # Get the objkt id from the swaps bigmap
-        objkt_id = swaps_bigmap[swap_id]["objkt_id"]
-
-        # Get the collector and artist wallet ids
-        collector_wallet_id = transaction["sender"]["address"]
-        artist_wallet_id = objkt_creators[objkt_id]
-
-        # Move to the next transaction if one of the walles is a contract
-        if (artist_wallet_id.startswith("KT") or 
-            collector_wallet_id.startswith("KT")):
-            continue
-
-        # Move to the next transaction if the artist and the collector coincide
-        if artist_wallet_id == collector_wallet_id:
-            continue
-
-        # Add the collector to the artist collectors list
-        collectors = users_connections[artist_wallet_id]["collectors"]
-
-        if collector_wallet_id in collectors:
-            collectors[collector_wallet_id] += 1
-        else:
-            collectors[collector_wallet_id] = 1
-
-        # Add the artist to the collector artists list
-        if collector_wallet_id in users_connections:
-            artists = users_connections[collector_wallet_id]["artists"]
-
-            if artist_wallet_id in artists:
-                artists[artist_wallet_id] += 1
-            else:
-                artists[artist_wallet_id] = 1
-        else:
-            if collector_wallet_id in users:
-                alias = users[collector_wallet_id]["alias"]
-            else:
-                alias = ""
-
-            users_connections[collector_wallet_id] = {
-                "alias": alias,
-                "artists": {artist_wallet_id: 1},
-                "collectors": {},
-                "reported": False,
-                "counter": user_counter}
-            user_counter += 1
-
-    for collector_wallet_id, objktcom_collector in objktcom_collectors.items():
-        # Get the objkt ids
-        objkt_ids = (objktcom_collector["bid_objkts"] + 
-                     objktcom_collector["ask_objkts"] + 
-                     objktcom_collector["english_auction_objkts"] + 
-                     objktcom_collector["dutch_auction_objkts"])
-
-        # Loop over the collected OBJKT ids
-        for objkt_id in objkt_ids:
-            # Get the artist wallet id
-            artist_wallet_id = objkt_creators[objkt_id]
-
-            # Move to the next OBJKT if the wallet is a contract
-            if artist_wallet_id.startswith("KT"):
-                continue
-
-            # Move to the next OBJKT if the artist and the collector coincide
-            if artist_wallet_id == collector_wallet_id:
-                continue
-
-            # Add the collector to the artist collectors list
-            collectors = users_connections[artist_wallet_id]["collectors"]
-
-            if collector_wallet_id in collectors:
-                collectors[collector_wallet_id] += 1
-            else:
-                collectors[collector_wallet_id] = 1
-
-            # Add the artist to the collector artists list
-            if collector_wallet_id in users_connections:
-                artists = users_connections[collector_wallet_id]["artists"]
-
-                if artist_wallet_id in artists:
-                    artists[artist_wallet_id] += 1
-                else:
-                    artists[artist_wallet_id] = 1
-            else:
-                if collector_wallet_id in users:
-                    alias = users[collector_wallet_id]["alias"]
-                else:
-                    alias = objktcom_collector["alias"]
-
-                users_connections[collector_wallet_id] = {
-                    "alias": alias,
-                    "artists": {artist_wallet_id: 1},
-                    "collectors": {},
-                    "reported": False,
-                    "counter": user_counter}
-                user_counter += 1
-
-    # Fill the reported user information
-    for reported_user_wallet_id in reported_users:
-        if reported_user_wallet_id in users_connections:
-            users_connections[reported_user_wallet_id]["reported"] = True
-
-    # Process the connections information to a different format
-    for user in users_connections.values():
-        # Get the lists of artist and collectors wallets
-        artists_and_collectors_wallets = [
-            wallet for wallet in user["artists"] if wallet in user["collectors"]]
-        artists_wallets = [
-            wallet for wallet in user["artists"] if not wallet in user["collectors"]]
-        collectors_wallets = [
-            wallet for wallet in user["collectors"] if not wallet in user["artists"]]
-
-        # Get the lists of artists and collectors weights
-        artists_and_collectors_weights = [
-            user["artists"][wallet] + user["collectors"][wallet] for wallet in artists_and_collectors_wallets]
-        artists_weights = [
-            user["artists"][wallet] for wallet in artists_wallets]
-        collectors_weights = [
-            user["collectors"][wallet] for wallet in collectors_wallets]
-
-        # Add these lists to the user information
-        user["artists_and_collectors"] = artists_and_collectors_wallets
-        user["artists_and_collectors_weights"] = artists_and_collectors_weights
-        user["artists"] = artists_wallets
-        user["artists_weights"] = artists_weights
-        user["collectors"] = collectors_wallets
-        user["collectors_weights"] = collectors_weights
-
-    # Create the serialized users connections
-    serialized_users_connections = {}
-
-    for wallet_id, user in users_connections.items():
-        serialized_artists_and_collectors = [
-            users_connections[artist_and_collector]["counter"] for artist_and_collector in user["artists_and_collectors"]]
-        serialized_artists = [
-            users_connections[artist]["counter"] for artist in user["artists"]]
-        serialized_collectors = [
-            users_connections[collector]["counter"] for collector in user["collectors"]]
-
-        serialized_users_connections[user["counter"]] = {
-            "wallet": wallet_id,
-            "alias": user["alias"],
-            "artists_and_collectors": serialized_artists_and_collectors,
-            "artists_and_collectors_weights": user["artists_and_collectors_weights"],
-            "artists": serialized_artists,
-            "artists_weights": user["artists_weights"],
-            "collectors": serialized_collectors,
-            "collectors_weights": user["collectors_weights"],
-            "reported": user["reported"]}
-
-    return users_connections, serialized_users_connections
-
-
-def group_users_per_day(users, first_year=2021, first_month=3, first_day=1):
-    """Groups the given users per the day of their first interaction.
-
-    Parameters
-    ----------
-    users: dict
-        A python dictionary with the users information.
-    first_year: int, optional
-        The first year to count. Default is 2021.
-    first_month: int, optional
-        The first month to count. Default is 3 (March).
-    first_day: int, optional
-        The first day to count. Default is 1.
-
-    Returns
-    -------
-    list
-        A python list with the users grouped by day.
-
-    """
-    # Get the users wallet ids and their first interation time stamp
-    wallet_ids = np.array(list(users.keys()))
-    timestamps = np.array(
-        [user["first_interaction"]["timestamp"] for user in users.values()])
-
-    # Extract the years, months and days from the time stamps
-    years, months, days = split_timestamps(timestamps)
-
-    # Get the users per day
-    users_per_day = []
-    started = False
-    finished = False
-    now = datetime.utcnow()
-
-    for year in range(first_year, np.max(years) + 1):
-        for month in range(1, 13):
-            for day in range(1, monthrange(year, month)[1] + 1):
-                # Check if we passed the starting day
-                if not started:
-                    started = ((year == first_year) and 
-                               (month == first_month) and 
-                               (day == first_day))
-
-                # Check that we started and didn't finish yet
-                if started and not finished:
-                    selected_wallets_ids = wallet_ids[
-                        (years == year) & (months == month) & (days == day)]
-                    users_per_day.append(
-                        [users[wallet_id] for wallet_id in selected_wallets_ids])
-
-                    # Check if we reached the current day
-                    finished = (year == now.year) and (
-                        month == now.month) and (day == now.day)
-
-    return users_per_day

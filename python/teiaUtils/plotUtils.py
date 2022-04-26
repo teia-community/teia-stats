@@ -1,8 +1,8 @@
 import numpy as np
-from datetime import datetime
-from datetime import timezone
 import matplotlib.pyplot as plt
 from calendar import monthrange
+from datetime import datetime
+from datetime import timezone
 
 from teiaUtils.analysisUtils import split_timestamps
 from teiaUtils.analysisUtils import get_counts_per_day
