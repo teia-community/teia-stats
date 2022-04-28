@@ -809,3 +809,33 @@ def get_artists_collaborations(offset=0, limit=10000):
             origination["originatedContract"]["address"]] = origination
 
     return artists_collaborations
+
+
+def get_teia_community_votes():
+    """Returns the votes from the Teia Community vote contract.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the Teia Community votes.
+
+    """
+    # Get the votes bigmap keys
+    url = "https://api.tzkt.io/v1/bigmaps/64367/keys"
+    parameters = {"limit": 10000}
+    bigmap_keys = get_query_result(url, parameters)
+
+    # Build the dictionary with the votes
+    votes = {}
+
+    for bigmap_key in bigmap_keys:
+        address = bigmap_key["key"]["address"]
+        poll = bigmap_key["key"]["string"]
+        vote = bigmap_key["value"]
+
+        if address not in votes:
+            votes[address] = {}
+
+        votes[address][poll] = vote
+
+    return votes

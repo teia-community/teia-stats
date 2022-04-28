@@ -59,6 +59,9 @@ users.add_collect_transactions(teia_collects, teia_swaps_bigmap, hen_royalties_b
 users.add_swap_transactions(hen_swaps)
 users.add_swap_transactions(teia_swaps)
 
+# Include also the hDAO owners
+users.add_hdao_information(hdao_ledger_bigmap, hdao_snapshot_level)
+
 # Add the restricted wallets information
 restricted_addresses = get_restricted_addresses()
 restricted_addresses.append("tz1eee5rapGDbq2bcZYTQwNbrkB4jVSQSSHx")  # hDAO wash trading
@@ -84,11 +87,15 @@ users.add_restricted_addresses_information(restricted_addresses)
 # Add the user names
 users.add_usernames(hen_registries_bigmap, tzprofiles, wallets)
 
+# Add the Teia Community votes information
+votes = get_teia_community_votes()
+polls = ["QmU7zZepzHiLMUme1xRHZyTdbyD4j2EfUodiGJeA1Rv6QQ",
+         "QmVSWZZcBT6zRrcZM6hf9VZJ7Qha5GXUBScQowJJ7fYQxT",
+         "QmPDYWmGdxae8gUxqiPa4rkuQCc8P6sggLvUi5HQrrCzug"]
+users.add_teia_community_votes(votes, polls)
+
 # Add the artists collaborations information
 users.add_artists_collaborations(artists_collaborations)
-
-# Add the hDAO snapshot information
-users.add_hdao_information(hdao_ledger_bigmap, hdao_snapshot_level)
 
 # Compress the user connections to save some memory
 users.compress_user_connections()
@@ -98,9 +105,13 @@ artists = users.select("artists").select("not_restricted").select("not_contract"
 collectors = users.select("collectors").select("not_restricted").select("not_contract")
 patrons = users.select("patrons").select("not_restricted").select("not_contract")
 swappers = users.select("swappers").select("not_restricted").select("not_contract")
+hdao_owners = users.select("hdao_owners").select("not_restricted").select("not_contract")
 collaborations = users.select("collaborations").select("not_restricted")
 contracts = users.select("contract").select("not_restricted")
 restricted = users.select("restricted")
+
+# Save as a csv file the complete list of users, excluding contracts
+users.select("not_contract").save_as_csv_file("../data/teia_users.csv")
 
 # Print some information about the total number of users
 print("There are currently %i H=N and Teia users." % (
@@ -220,7 +231,8 @@ plot_new_users_per_day(
 save_figure(os.path.join(figures_dir, "new_collabs_per_day.png"))
 
 plot_new_users_per_day(
-    users.select("not_restricted"), title="New users per day",
+    users.select("not_restricted").select("not_hdao_owner"),
+    title="New users per day",
     x_label="Days since first minted OBJKT (1st of March)",
     y_label="New users per day", exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "new_users_per_day.png"))

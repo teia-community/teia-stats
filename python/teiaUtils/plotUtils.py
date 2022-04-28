@@ -351,8 +351,6 @@ def plot_active_users_per_day(addresses, timestamps, users, title, x_label,
 
     # Get the active users, artists and patrons per day
     active_users_per_day = []
-    active_artists_per_day = []
-    active_patrons_per_day = []
     started = False
     finished = False
     now = datetime.utcnow()
@@ -371,15 +369,7 @@ def plot_active_users_per_day(addresses, timestamps, users, title, x_label,
                     # Get the number of unique users for the current day
                     unique_users = np.unique(addresses[
                         (years == year) & (months == month) & (days == day)])
-                    #is_artist = np.array([
-                    #    (address in users and users[address].type == "artist") 
-                    #    for address in unique_users])
-                    #is_patron = np.array([
-                    #    (address in users and users[address].type == "patron") 
-                    #    for address in unique_users])
                     active_users_per_day.append(len(unique_users))
-                    #active_artists_per_day.append(np.sum(is_artist))
-                    #active_patrons_per_day.append(np.sum(is_patron))
 
                     # Check if we reached the last day
                     finished = ((year == now.year) and
@@ -388,18 +378,13 @@ def plot_active_users_per_day(addresses, timestamps, users, title, x_label,
 
     if exclude_last_day:
         active_users_per_day = active_users_per_day[:-1]
-        #active_artists_per_day = active_artists_per_day[:-1]
-        #active_patrons_per_day = active_patrons_per_day[:-1]
 
     # Create the figure
     plt.figure(figsize=(7, 5), facecolor="white", tight_layout=True, **kwargs)
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.plot(active_users_per_day, label="all users")
-    #plt.plot(active_artists_per_day, label="artists")
-    #plt.plot(active_patrons_per_day, label="patrons")
-    plt.legend()
+    plt.plot(active_users_per_day)
     plt.show(block=False)
 
 

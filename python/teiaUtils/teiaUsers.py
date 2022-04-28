@@ -1,5 +1,8 @@
 import numpy as np
 
+from teiaUtils.analysisUtils import get_datetime_from_timestamp
+from builtins import None
+
 
 class TeiaUser:
     """This class collects all the information associated with a Teia user.
@@ -30,7 +33,7 @@ class TeiaUser:
         self.hen_username = None
 
         # hDAO information
-        self.hdao = None
+        self.hdao = 0
         self.hdao_snapshot_level = None
 
         # Activity information
@@ -68,6 +71,9 @@ class TeiaUser:
         # Collaborations
         self.collaborations = []
 
+        # Teia community votes
+        self.teia_community_votes = {}
+
     def set_restricted(self, is_restricted):
         """Sets the user as restricted or not.
 
@@ -91,6 +97,10 @@ class TeiaUser:
             which means the current block level.
 
         """
+        # Set the user type as hDAO owner if it has not type defined
+        if self.type is None:
+            self.type = "hdao_owner"
+
         self.hdao = hdao
         self.hdao_snapshot_level = level
 
@@ -364,7 +374,6 @@ class TeiaUser:
                     self.minted_objkts += collab.minted_objkts
 
                     # Add the money earned with the collaboration
-                    print(collaboration["storage"]["shares"], self.address, address)
                     share = (
                         int(collaboration["storage"]["shares"][self.address]) / 
                         int(collaboration["storage"]["totalShares"]))
@@ -372,6 +381,22 @@ class TeiaUser:
                         share * collab.total_money_earned_own_objkts)
                     self.total_money_earned += (
                         share * collab.total_money_earned)
+
+    def add_teia_community_votes(self, votes, polls):
+        """Adds the Teia Community votes associated to the user.
+
+        Parameters
+        ----------
+        votes: dict
+            The Teia Community votes information.
+        polls: list
+            The list of polls to consider.
+
+        """
+        if self.address in votes:
+            for poll, vote in votes[self.address].items():
+                if poll in polls:
+                    self.teia_community_votes[poll] = vote
 
     def compress_connections(self, users):
         """Compresses the artist and collector connections information using the
@@ -574,6 +599,29 @@ class TeiaUsers:
             # Add the swap transaction to the user information
             self.users[address].add_swap_transaction(transaction)
 
+    def add_hdao_information(self, hdao_ledger, level):
+        """Adds the hDAO information to the users.
+
+        Parameters
+        ----------
+        hdao_ledger: dict
+            The hDAO ledger bigmap.
+        level: dict
+            The block level when the hDAO ledger bigmap snapshot has been taken.
+
+        """
+        for address, hdao in hdao_ledger.items():
+            # Check that the account still owns some hDAO
+            if int(hdao) > 0:
+                # Add a new user if the address is new
+                if address not in self.users:
+                    id = len(self.users)
+                    self.users[address] = TeiaUser(address, id)
+                    self.id_to_address[id] = address
+    
+                # Set the user hDAO amount
+                self.users[address].set_hdao(int(hdao), level)
+
     def add_restricted_addresses_information(self, restricted_addresses):
         """Adds the restricted addresses information to the users.
 
@@ -614,22 +662,19 @@ class TeiaUsers:
         for user in self.users.values():
             user.add_artists_collaborations(artists_collaborations, self.users)
 
-    def add_hdao_information(self, hdao_ledger, level):
-        """Adds the hDAO information to the users.
+    def add_teia_community_votes(self, votes, polls):
+        """Adds the Teia Community votes information to the users.
 
         Parameters
         ----------
-        hdao_ledger: dict
-            The hDAO ledger bigmap.
-        level: dict
-            The block level when the hDAO ledger bigmap snapshot has been taken.
+        votes: dict
+            The Teia Community votes information.
+        polls: list
+            The list of polls to consider.
 
         """
-        for address, user in self.users.items():
-            if address in hdao_ledger:
-                user.set_hdao(int(hdao_ledger[address]), level)
-            else:
-                user.set_hdao(0, level)
+        for user in self.users.values():
+            user.add_teia_community_votes(votes, polls)
 
     def compress_user_connections(self):
         """Compresses the user connections information using the user ids
@@ -646,7 +691,8 @@ class TeiaUsers:
         ----------
         filter_selection: string
             The filter selection: artists, patrons, collectors, swappers,
-            restricted, not_restricted, collaborations, contract, not_contract.
+            hdao_owners, restricted, not_restricted, collaborations, contract,
+            not_contract.
 
         """
         selected_users = {}
@@ -669,6 +715,16 @@ class TeiaUsers:
         if filter_selection == "swappers":
             for address, user in self.users.items():
                 if user.type == "swapper":
+                    selected_users[address] = user
+
+        if filter_selection == "hdao_owners":
+            for address, user in self.users.items():
+                if user.type == "hdao_owner":
+                    selected_users[address] = user
+
+        if filter_selection == "not_hdao_owners":
+            for address, user in self.users.items():
+                if user.type != "hdao_owner":
                     selected_users[address] = user
 
         if filter_selection == "restricted":
@@ -753,3 +809,88 @@ class TeiaUsers:
 
         # Return the user addresses ordered by the total money spent
         return addresses[total_money_spent.argsort()[::-1]][:n]
+
+    def save_as_csv_file(self, file_name):
+        """Saves the most relevant user information in a csv file.
+
+        Parameters
+        ----------
+        file_name: str
+            The complete path to the csv file where the users information
+            should be saved.
+
+        """
+        # Define the output file columns and their format
+        columns = [
+            "username", "address", "type", "restricted", "has_tzprofile",
+            "has_hen_profile", "has_tzkt_profile", "hdao", "first_activity",
+            "last_activity", "activity_period", "active_days", "minted_objkts",
+            "collected_objkts", "swapped_objkts", "money_earned_own_objkts",
+            "money_earned_collaborations_objkts", "money_earned_other_objkts",
+            "money_earned", "money_spent", "collaborations",
+            "connections_to_artists", "connections_to_collectors",
+            "connections_to_users", "teia_votes"]
+        format = [
+            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%f", "%s", "%s", "%i",
+            "%i", "%i", "%i", "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i",
+            "%i", "%i", "%i"]
+
+        with open(file_name, "w") as file:
+            # Write the header
+            file.write(",".join(columns) + "\n")
+
+            # Loop over the users
+            for user in self.users.values():
+                # Set the username
+                username = user.address if user.username is None else user.username
+
+                # Calculate the user active period
+                first_activity = None
+                last_activity = None
+                active_period = 0
+
+                if user.first_activity is not None:
+                    first_activity = user.first_activity["timestamp"]
+                    last_activity = user.last_activity["timestamp"]
+                    active_period = (
+                        get_datetime_from_timestamp(last_activity) - 
+                        get_datetime_from_timestamp(last_activity)).days
+
+                # Calculate how many days the user have been active
+                active_days = {
+                    timestamp[:10] for timestamp in user.mint_timestamps}
+                active_days |= {
+                    timestamp[:10] for timestamp in user.collect_timestamps}
+                active_days |= {
+                    timestamp[:10] for timestamp in user.swap_timestamps}
+
+                # Write the user data in the output file
+                data = (
+                    username.replace(",", "_").replace(";", "_"),
+                    user.address,
+                    user.type,
+                    user.restricted,
+                    user.tzprofiles_username is not None,
+                    user.hen_username is not None,
+                    user.tzkt_username is not None,
+                    user.hdao / 1e6,
+                    first_activity,
+                    last_activity,
+                    active_period,
+                    len(active_days),
+                    len(set(user.minted_objkts)),
+                    len(set(user.collected_objkts)),
+                    len(set(user.swapped_objkts)),
+                    user.total_money_earned_own_objkts,
+                    user.total_money_earned_collaborations_objkts,
+                    user.total_money_earned_other_objkts,
+                    user.total_money_earned,
+                    user.total_money_spent,
+                    len(user.collaborations),
+                    len(user.artist_connections),
+                    len(user.collector_connections),
+                    len(set(list(user.artist_connections.keys()) + 
+                            list(user.collector_connections.keys()))),
+                    len(user.teia_community_votes))
+                text = ", ".join(format) % data
+                file.write(text + "\n")
