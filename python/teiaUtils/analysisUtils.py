@@ -123,10 +123,14 @@ def split_timestamps(timestamps):
         A python tuple with the years, months and days numpy arrays.
 
     """
-    dates = [get_datetime_from_timestamp(timestamp) for timestamp in timestamps]
-    years = np.array([date.year for date in dates])
-    months = np.array([date.month for date in dates])
-    days = np.array([date.day for date in dates])
+    years = np.empty(len(timestamps), dtype=int)
+    months = np.empty(len(timestamps), dtype=int)
+    days = np.empty(len(timestamps), dtype=int)
+
+    for i, timestamp in enumerate(timestamps):
+        years[i] = timestamp.split("-")[0]
+        months[i] = timestamp.split("-")[1]
+        days[i] = timestamp.split("-")[2].split("T")[0]
 
     return years, months, days
 
@@ -204,8 +208,8 @@ def group_users_per_day(users, first_year=2021, first_month=3, first_day=1):
         A python list with the users grouped by day.
 
     """
-    # Get the users wallets and their first activity time stamp
-    wallets = np.array(list(users.keys()))
+    # Get the users addresses and their first activity time stamp
+    addresses = np.array(list(users.keys()))
     timestamps = np.array(
         [user.first_activity["timestamp"] for user in users.values()])
 
@@ -230,10 +234,10 @@ def group_users_per_day(users, first_year=2021, first_month=3, first_day=1):
                 # Check that we started and didn't finish yet
                 if started and not finished:
                     # Add the users that were first active that day
-                    selected_wallets = wallets[
+                    selected_addresses = addresses[
                         (years == year) & (months == month) & (days == day)]
                     users_per_day.append(
-                        [users[wallet] for wallet in selected_wallets])
+                        [users[address] for address in selected_addresses])
 
                     # Check if we reached the current day
                     finished = ((year == now.year) and

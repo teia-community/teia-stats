@@ -1,3 +1,4 @@
+import numpy as np
 
 
 class TeiaUser:
@@ -5,17 +6,20 @@ class TeiaUser:
 
     """
 
-    def __init__(self, address):
+    def __init__(self, address, id):
         """The class constructor.
 
         Parameters
         ----------
         address: str
             The user tz address.
+        id: str
+            The user id.
 
         """
         # General information
         self.address = address
+        self.id = id
         self.type = None
         self.restricted = False
 
@@ -52,6 +56,7 @@ class TeiaUser:
         self.money_earned_other_objkts = []
         self.money_spent = []
         self.total_money_earned_own_objkts = 0
+        self.total_money_earned_collaborations_objkts = 0
         self.total_money_earned_other_objkts = 0
         self.total_money_earned = 0
         self.total_money_spent = 0
@@ -59,6 +64,9 @@ class TeiaUser:
         # Connections with other users
         self.artist_connections = {}
         self.collector_connections = {}
+
+        # Collaborations
+        self.collaborations = []
 
     def set_restricted(self, is_restricted):
         """Sets the user as restricted or not.
@@ -192,6 +200,9 @@ class TeiaUser:
 
         # Check if the user is the OBJKT creator
         if self.address == creator_address:
+            # Set the user type as artist
+            self.type = "artist"
+
             # Add the money earned in royalties with the collect
             money_earned = paid_amount * objkt_royalties
             self.money_earned_own_objkts.append(money_earned)
@@ -206,6 +217,10 @@ class TeiaUser:
 
         # Check if the user is the seller
         if self.address == seller_address:
+            # Set the user type as swapper if it's not an artist nor a patron
+            if self.type not in ["artist", "patron"]:
+                self.type = "swapper"
+
             # Add the money earned with the sell of the OBJKT
             site_fees = 25 / 1000
             money_earned = paid_amount * (1 - objkt_royalties - site_fees)
@@ -319,6 +334,71 @@ class TeiaUser:
         self.swap_timestamps.append(timestamp)
         self.swapped_objkts.append(objkt_id)
 
+    def add_artists_collaborations(self, artists_collaborations, users):
+        """Adds the artists collaborations information to the user.
+
+        Parameters
+        ----------
+        artists_collaborations: dict
+            The artists collaborations origination information.
+        users: dict
+            A python dictionary with the users information.
+
+        """
+        # Loop over the list of artists collaborations
+        for address, collaboration in artists_collaborations.items():
+            # Set the user type as a collaboration if the addresses coincide
+            if self.address == address:
+                self.type = "collaboration"
+
+            # Check if the user is one of the collaboration core participants
+            if self.address in collaboration["storage"]["coreParticipants"]:
+                # Add the collaboration to the list of user collaborations
+                self.collaborations.append(address)
+
+                # Check if the collaboration minted some OBJKTs
+                if address in users and len(users[address].minted_objkts) > 0:
+                    # Associate the collaboration OBJKTs to the user
+                    collab = users[address]
+                    self.mint_timestamps += collab.mint_timestamps
+                    self.minted_objkts += collab.minted_objkts
+
+                    # Add the money earned with the collaboration
+                    print(collaboration["storage"]["shares"], self.address, address)
+                    share = (
+                        int(collaboration["storage"]["shares"][self.address]) / 
+                        int(collaboration["storage"]["totalShares"]))
+                    self.total_money_earned_collaborations_objkts += (
+                        share * collab.total_money_earned_own_objkts)
+                    self.total_money_earned += (
+                        share * collab.total_money_earned)
+
+    def compress_connections(self, users):
+        """Compresses the artist and collector connections information using the
+        user ids.
+
+        Parameters
+        ----------
+        users: dict
+            A python dictionary with the users information.
+
+        """
+        # Compress the artist connections
+        compressed_connections = {}
+
+        for address, connections in self.artist_connections.items():
+            compressed_connections[users[address].id] = connections
+
+        self.artist_connections = compressed_connections
+
+        # Compress the collector connections
+        compressed_connections = {}
+
+        for address, connections in self.collector_connections.items():
+            compressed_connections[users[address].id] = connections
+
+        self.collector_connections = compressed_connections
+
     def __str__(self):
         """Prints the instance attributes.
 
@@ -353,6 +433,8 @@ class TeiaUsers:
 
         """
         self.users = {} if users is None else users
+        self.id_to_address = {
+            user.id: user.address for user in self.users.values()}
 
     def __len__(self):
         """Returns the users length.
@@ -390,28 +472,42 @@ class TeiaUsers:
         """
         return self.users.items()
 
-    def add_mint_transactions(self, transactions):
+    def get_user(self, address):
+        """Returns the user connected to the given address.
+
+        """
+        return self.users[address]
+
+    def get_user_by_id(self, id):
+        """Returns the user connected to the given id.
+
+        """
+        return self.users[self.id_to_address[id]]
+
+    def add_mint_transactions(self, mint_transactions, mint_objkt_transactions):
         """Adds the mint transactions information to the users.
 
         Parameters
         ----------
-        transactions: list
+        mint_transactions: list
             The list of mint transactions.
+        mint_objkt_transactions: list
+            The list of mint_OBJKT transactions.
 
         """
-        # Loop over the list of mint transactions
-        for transaction in transactions:
+        # Loop over the list of transactions
+        for mint, mint_objkt in zip(mint_transactions, mint_objkt_transactions):
             # Extract the minter address
-            address = transaction["initiator"]["address"]
+            address = mint_objkt["sender"]["address"]
 
-            # Check that it is a normal address and not a contract
-            if address.startswith("tz"):
-                # Add a new user if the address is new
-                if address not in self.users:
-                    self.users[address] = TeiaUser(address)
+            # Add a new user if the address is new
+            if address not in self.users:
+                id = len(self.users)
+                self.users[address] = TeiaUser(address, id)
+                self.id_to_address[id] = address
 
-                # Add the mint transaction to the user information
-                self.users[address].add_mint_transaction(transaction)
+            # Add the mint transaction to the user information
+            self.users[address].add_mint_transaction(mint)
 
     def add_collect_transactions(self, transactions, swaps, royalties):
         """Adds the collect transactions information to the users.
@@ -445,15 +541,15 @@ class TeiaUsers:
             addresses = {creator_address, seller_address, collector_address}
 
             for address in addresses:
-                # Check that it is a normal address and not a contract
-                if address.startswith("tz"):
-                    # Add a new user if the address is new
-                    if address not in self.users:
-                        self.users[address] = TeiaUser(address)
+                # Add a new user if the address is new
+                if address not in self.users:
+                    id = len(self.users)
+                    self.users[address] = TeiaUser(address, id)
+                    self.id_to_address[id] = address
 
-                    # Add the collect transaction to the user information
-                    self.users[address].add_collect_transaction(
-                        transaction, swaps, royalties)
+                # Add the collect transaction to the user information
+                self.users[address].add_collect_transaction(
+                    transaction, swaps, royalties)
 
     def add_swap_transactions(self, transactions):
         """Adds the swap transactions information to the users.
@@ -469,26 +565,26 @@ class TeiaUsers:
             # Extract the swapper address
             address = transaction["sender"]["address"]
 
-            # Check that it is a normal address and not a contract
-            if address.startswith("tz"):
-                # Add a new user if the address is new
-                if address not in self.users:
-                    self.users[address] = TeiaUser(address)
+            # Add a new user if the address is new
+            if address not in self.users:
+                id = len(self.users)
+                self.users[address] = TeiaUser(address, id)
+                self.id_to_address[id] = address
 
-                # Add the swap transaction to the user information
-                self.users[address].add_swap_transaction(transaction)
+            # Add the swap transaction to the user information
+            self.users[address].add_swap_transaction(transaction)
 
-    def add_restricted_wallets_information(self, restricted_wallets):
-        """Adds the restricted wallets information to the users.
+    def add_restricted_addresses_information(self, restricted_addresses):
+        """Adds the restricted addresses information to the users.
 
         Parameters
         ----------
-        restricted_wallets: list
-            The python list with the Teia restricted wallets.
+        restricted_addresses: list
+            The python list with the Teia restricted addresses.
 
         """
-        for wallet, user in self.users.items():
-            user.set_restricted(wallet in restricted_wallets)
+        for address, user in self.users.items():
+            user.set_restricted(address in restricted_addresses)
 
     def add_usernames(self, registries_bigmap, tzprofiles, wallets):
         """Adds the user names information to the users.
@@ -503,8 +599,20 @@ class TeiaUsers:
             The complete list of tezos wallets obtained from the TzKt API.
 
         """
-        for wallet, user in self.users.items():
+        for address, user in self.users.items():
             user.set_usernames(registries_bigmap, tzprofiles, wallets)
+
+    def add_artists_collaborations(self, artists_collaborations):
+        """Adds the artists collaborations information to the users.
+
+        Parameters
+        ----------
+        artists_collaborations: dict
+            The artists collaborations origination information.
+
+        """
+        for user in self.users.values():
+            user.add_artists_collaborations(artists_collaborations, self.users)
 
     def add_hdao_information(self, hdao_ledger, level):
         """Adds the hDAO information to the users.
@@ -517,11 +625,19 @@ class TeiaUsers:
             The block level when the hDAO ledger bigmap snapshot has been taken.
 
         """
-        for wallet, user in self.users.items():
-            if wallet in hdao_ledger:
-                user.set_hdao(int(hdao_ledger[wallet]), level)
+        for address, user in self.users.items():
+            if address in hdao_ledger:
+                user.set_hdao(int(hdao_ledger[address]), level)
             else:
                 user.set_hdao(0, level)
+
+    def compress_user_connections(self):
+        """Compresses the user connections information using the user ids
+        instead of their addresses.
+
+        """
+        for user in self.users.values():
+            user.compress_connections(self.users)
 
     def select(self, filter_selection):
         """Selects the users by a given filter selection.
@@ -530,39 +646,110 @@ class TeiaUsers:
         ----------
         filter_selection: string
             The filter selection: artists, patrons, collectors, swappers,
-            restricted, not_restricted.
+            restricted, not_restricted, collaborations, contract, not_contract.
 
         """
         selected_users = {}
 
         if filter_selection == "artists":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if user.type == "artist":
-                    selected_users[wallet] = user
+                    selected_users[address] = user
 
         if filter_selection == "collectors":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if len(user.collected_objkts) > 0:
-                    selected_users[wallet] = user
+                    selected_users[address] = user
 
         if filter_selection == "patrons":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if user.type == "patron":
-                    selected_users[wallet] = user
+                    selected_users[address] = user
 
         if filter_selection == "swappers":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if user.type == "swapper":
-                    selected_users[wallet] = user
+                    selected_users[address] = user
 
         if filter_selection == "restricted":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if user.restricted:
-                    selected_users[wallet] = user
+                    selected_users[address] = user
 
         if filter_selection == "not_restricted":
-            for wallet, user in self.users.items():
+            for address, user in self.users.items():
                 if not user.restricted:
-                    selected_users[wallet] = user
+                    selected_users[address] = user
+
+        if filter_selection == "collaborations":
+            for address, user in self.users.items():
+                if user.type == "collaboration":
+                    selected_users[address] = user
+
+        if filter_selection == "contract":
+            for address, user in self.users.items():
+                if address.startswith("KT"):
+                    selected_users[address] = user
+
+        if filter_selection == "not_contract":
+            for address, user in self.users.items():
+                if address.startswith("tz"):
+                    selected_users[address] = user
 
         return TeiaUsers(selected_users)
+
+    def get_top_selling_artists(self, n):
+        """Returns the addresses of the top selling artists.
+
+        Restricted users are not considered.
+
+        Parameters
+        ----------
+        n: int
+            The number of artists to return.
+
+        Returns
+        -------
+        object
+            A numpy array with the top selling artists addresses.
+
+        """
+        # Get the addresses and the total earned money by each user selling
+        # their own OBJKTs
+        addresses = np.array([
+            user.address for user in self.users.values()
+            if not user.restricted]) 
+        total_money_earned_own_objkts = np.array([
+            user.total_money_earned_own_objkts for user in self.users.values()
+            if not user.restricted])
+
+        # Return the user addresses ordered by the total money earned
+        return addresses[total_money_earned_own_objkts.argsort()[::-1]][:n]
+
+    def get_top_collectors(self, n):
+        """Returns the addresses of the top collectors ordered by the money they
+        spent.
+
+        Restricted users are not considered.
+
+        Parameters
+        ----------
+        n: int
+            The number of collectors to return.
+
+        Returns
+        -------
+        object
+            A numpy array with the top collectors addresses.
+
+        """
+        # Get the addresses and the total money spent by each user
+        addresses = np.array([
+            user.address for user in self.users.values()
+            if not user.restricted]) 
+        total_money_spent = np.array([
+            user.total_money_spent for user in self.users.values()
+            if not user.restricted])
+
+        # Return the user addresses ordered by the total money spent
+        return addresses[total_money_spent.argsort()[::-1]][:n]

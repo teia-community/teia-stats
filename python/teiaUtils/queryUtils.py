@@ -110,14 +110,14 @@ def get_tez_exchange_rates(coin, start_date="2018-10-16T00:00:00Z",
     return timestamps, exchange_rates
 
 
-def get_restricted_wallets():
-    """Returns the list of restricted wallets stored in the Teia Community
+def get_restricted_addresses():
+    """Returns the list of restricted addresses stored in the Teia Community
     github repository.
 
     Returns
     -------
     list
-        A python list with the restricted wallets.
+        A python list with the restricted addresses.
 
     """
     github_repository = "teia-community/teia-report"
@@ -768,3 +768,44 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
             bigmap[bigmap_key["key"]] = bigmap_key["value"]
 
     return bigmap
+
+
+def get_artists_collaborations(offset=0, limit=10000):
+    """Returns a dictionary with all the artists collaborations originations
+    information.
+
+    Parameters
+    ----------
+    offset: int, optional
+        The number of initial originations that should be skipped. This is
+        mostly used for pagination. Default is 0.
+    limit: int, optional
+        The maximum number of originations to return. Default is 10000. The
+        maximum allowed by the API is 10000.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the artists collaborations originations
+        information.
+
+    """
+    # Get the originations from the artists collaborations
+    url = "https://api.tzkt.io/v1/operations/originations"
+    parameters = {
+        "sender": "KT1DoyD6kr8yLK8mRBFusyKYJUk2ZxNHKP1N",
+        "status": "applied",
+        "offset": offset,
+        "limit": limit,
+        "select": "timestamp,initiator,originatedContract,storage"
+    }
+    originations = get_query_result(url, parameters)
+
+    # Build the dictionary with the artists collaboration information
+    artists_collaborations = {}
+
+    for origination in originations:
+        artists_collaborations[
+            origination["originatedContract"]["address"]] = origination
+
+    return artists_collaborations
