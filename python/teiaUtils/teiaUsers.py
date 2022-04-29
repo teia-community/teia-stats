@@ -854,7 +854,7 @@ class TeiaUsers:
                     last_activity = user.last_activity["timestamp"]
                     active_period = (
                         get_datetime_from_timestamp(last_activity) - 
-                        get_datetime_from_timestamp(last_activity)).days
+                        get_datetime_from_timestamp(first_activity)).days
 
                 # Calculate how many days the user have been active
                 active_days = {
