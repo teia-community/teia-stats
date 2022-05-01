@@ -45,6 +45,7 @@ teia_swaps_bigmap = get_teia_bigmap("swaps", transactions_dir, sleep_time=10)
 
 # Get the artists collaborations information
 artists_collaborations = get_artists_collaborations()
+artists_collaborations_signatures = get_artists_collaborations_signatures()
 
 # Get the hDAO ledger bigmap at a given block level
 hdao_snapshot_level = None
@@ -95,7 +96,7 @@ polls = ["QmU7zZepzHiLMUme1xRHZyTdbyD4j2EfUodiGJeA1Rv6QQ",
 users.add_teia_community_votes(votes, polls)
 
 # Add the artists collaborations information
-users.add_artists_collaborations(artists_collaborations)
+users.add_artists_collaborations(artists_collaborations, artists_collaborations_signatures)
 
 # Compress the user connections to save some memory
 users.compress_user_connections()
@@ -231,7 +232,7 @@ plot_new_users_per_day(
 save_figure(os.path.join(figures_dir, "new_collabs_per_day.png"))
 
 plot_new_users_per_day(
-    users.select("not_restricted").select("not_hdao_owner"),
+    users.select("not_restricted").select("not_hdao_owners"),
     title="New users per day",
     x_label="Days since first minted OBJKT (1st of March)",
     y_label="New users per day", exclude_last_day=exclude_last_day)

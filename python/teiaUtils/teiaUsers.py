@@ -1,7 +1,6 @@
 import numpy as np
 
 from teiaUtils.analysisUtils import get_datetime_from_timestamp
-from builtins import None
 
 
 class TeiaUser:
@@ -118,16 +117,32 @@ class TeiaUser:
 
         """
         if "alias" in wallets[self.address]:
-            self.tzkt_username = wallets[self.address]["alias"]
-            self.username = self.tzkt_username
+            self.tzkt_username = wallets[self.address]["alias"].strip()
+
+            if len(self.tzkt_username) > 0:
+                self.username = self.tzkt_username
 
         if self.address in tzprofiles:
-            self.tzprofiles_username = tzprofiles[self.address]["alias"]
-            self.username = self.tzprofiles_username
+            tzprofile = tzprofiles[self.address]
+
+            if tzprofile["alias"] is not None:
+                self.tzprofiles_username = tzprofile["alias"].strip()
+            elif tzprofile["twitter"] is not None:
+                self.tzprofiles_username = tzprofile["twitter"].strip()
+            elif tzprofile["discord"] is not None:
+                self.tzprofiles_username = tzprofile["discord"].strip()
+            elif tzprofile["github"] is not None:
+                self.tzprofiles_username = tzprofile["github"].strip()
+
+            if ((self.tzprofiles_username is not None) and 
+                (len(self.tzprofiles_username) > 0)):
+                self.username = self.tzprofiles_username
 
         if self.address in registries_bigmap:
-            self.hen_username = registries_bigmap[self.address]["user"]
-            self.username = self.hen_username
+            self.hen_username = registries_bigmap[self.address]["user"].strip()
+
+            if len(self.hen_username) > 0:
+                self.username = self.hen_username
 
     def add_mint_transaction(self, transaction):
         """Updates the user with the information of a new mint transaction.
@@ -344,13 +359,16 @@ class TeiaUser:
         self.swap_timestamps.append(timestamp)
         self.swapped_objkts.append(objkt_id)
 
-    def add_artists_collaborations(self, artists_collaborations, users):
+    def add_artists_collaborations(self, artists_collaborations,
+                                   artists_collaborations_signatures, users):
         """Adds the artists collaborations information to the user.
 
         Parameters
         ----------
         artists_collaborations: dict
             The artists collaborations origination information.
+        artists_collaborations_signatures: dict
+            The artists collaborations signatures information.
         users: dict
             A python dictionary with the users information.
 
@@ -363,15 +381,60 @@ class TeiaUser:
 
             # Check if the user is one of the collaboration core participants
             if self.address in collaboration["storage"]["coreParticipants"]:
-                # Add the collaboration to the list of user collaborations
-                self.collaborations.append(address)
+                # Get the user signed OBJKTs
+                signed_objkts = set()
+
+                if self.address in artists_collaborations_signatures:
+                    signed_objkts = set(
+                        artists_collaborations_signatures[self.address])
 
                 # Check if the collaboration minted some OBJKTs
                 if address in users and len(users[address].minted_objkts) > 0:
-                    # Associate the collaboration OBJKTs to the user
+                    # Add the collaboration to the list of user collaborations
+                    # if it signed one of the collaboration minted OBJKTs
                     collab = users[address]
-                    self.mint_timestamps += collab.mint_timestamps
-                    self.minted_objkts += collab.minted_objkts
+
+                    if len(set(collab.minted_objkts) & signed_objkts) > 0:
+                        self.collaborations.append(address)
+
+                    # Associate the collaboration OBJKTs to the user
+                    for timestamp, objkt_id in zip(collab.mint_timestamps,
+                                                   collab.minted_objkts):
+                        # Make sure the user signed the OBJKT
+                        if objkt_id not in signed_objkts:
+                            continue
+
+                        # Check if it's the first user activity
+                        if ((self.first_activity is None) or
+                            (timestamp < self.first_activity["timestamp"])):
+                            self.first_activity = {
+                                "type": "mint",
+                                "timestamp": timestamp}
+
+                        # Check if it's the last user activity
+                        if ((self.last_activity is None) or
+                            (timestamp > self.last_activity["timestamp"])):
+                            self.last_activity = {
+                                "type": "mint",
+                                "timestamp": timestamp}
+
+                        # Check if it's the first mint
+                        if ((self.first_mint is None) or
+                            (timestamp < self.first_mint["timestamp"])):
+                            self.first_mint = {
+                                "id": objkt_id,
+                                "timestamp": timestamp}
+                
+                        # Check if it's the last mint
+                        if ((self.last_mint is None) or
+                            (timestamp > self.last_mint["timestamp"])):
+                            self.last_mint = {
+                                "id": objkt_id,
+                                "timestamp": timestamp}
+
+                        # Add the timestamp and the OBJKT id to the lists
+                        self.mint_timestamps.append(timestamp)
+                        self.minted_objkts.append(objkt_id)
 
                     # Add the money earned with the collaboration
                     share = (
@@ -650,17 +713,22 @@ class TeiaUsers:
         for address, user in self.users.items():
             user.set_usernames(registries_bigmap, tzprofiles, wallets)
 
-    def add_artists_collaborations(self, artists_collaborations):
+    def add_artists_collaborations(self, artists_collaborations,
+                                   artists_collaborations_signatures):
         """Adds the artists collaborations information to the users.
 
         Parameters
         ----------
         artists_collaborations: dict
             The artists collaborations origination information.
+        artists_collaborations_signatures: dict
+            The artists collaborations signatures information.
 
         """
         for user in self.users.values():
-            user.add_artists_collaborations(artists_collaborations, self.users)
+            user.add_artists_collaborations(
+                artists_collaborations, artists_collaborations_signatures,
+                self.users)
 
     def add_teia_community_votes(self, votes, polls):
         """Adds the Teia Community votes information to the users.
@@ -824,16 +892,18 @@ class TeiaUsers:
         columns = [
             "username", "address", "type", "restricted", "has_tzprofile",
             "has_hen_profile", "has_tzkt_profile", "hdao", "first_activity",
-            "last_activity", "activity_period", "active_days", "minted_objkts",
-            "collected_objkts", "swapped_objkts", "money_earned_own_objkts",
+            "last_activity", "first_mint", "last_mint", "first_collect",
+            "last_collect", "first_swap", "last_swap", "activity_period",
+            "active_days", "minted_objkts", "collected_objkts",
+            "swapped_objkts", "money_earned_own_objkts",
             "money_earned_collaborations_objkts", "money_earned_other_objkts",
             "money_earned", "money_spent", "collaborations",
             "connections_to_artists", "connections_to_collectors",
             "connections_to_users", "teia_votes"]
         format = [
-            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%f", "%s", "%s", "%i",
-            "%i", "%i", "%i", "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i",
-            "%i", "%i", "%i"]
+            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%f", "%s", "%s", "%s",
+            "%s", "%s", "%s", "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%f",
+            "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -844,17 +914,40 @@ class TeiaUsers:
                 # Set the username
                 username = user.address if user.username is None else user.username
 
-                # Calculate the user active period
-                first_activity = None
-                last_activity = None
-                active_period = 0
+                # Get the activity timestamps
+                first_activity = ""
+                last_activity = ""
+                first_mint = ""
+                last_mint = ""
+                first_collect = ""
+                last_collect = ""
+                first_swap = ""
+                last_swap = ""
 
                 if user.first_activity is not None:
                     first_activity = user.first_activity["timestamp"]
                     last_activity = user.last_activity["timestamp"]
+
+                if user.first_mint is not None:
+                    first_mint = user.first_mint["timestamp"]
+                    last_mint = user.last_mint["timestamp"]
+
+                if user.first_collect is not None:
+                    first_collect = user.first_collect["timestamp"]
+                    last_collect = user.last_collect["timestamp"]
+
+                if user.first_swap is not None:
+                    first_swap = user.first_swap["timestamp"]
+                    last_swap = user.last_swap["timestamp"]
+
+                # Calculate the user active period
+                active_period = 0
+
+                if first_activity != "":
                     active_period = (
                         get_datetime_from_timestamp(last_activity) - 
-                        get_datetime_from_timestamp(first_activity)).days
+                        get_datetime_from_timestamp(first_activity)
+                        ).total_seconds() / (3600 * 24)
 
                 # Calculate how many days the user have been active
                 active_days = {
@@ -876,6 +969,12 @@ class TeiaUsers:
                     user.hdao / 1e6,
                     first_activity,
                     last_activity,
+                    first_mint,
+                    last_mint,
+                    first_collect,
+                    last_collect,
+                    first_swap,
+                    last_swap,
                     active_period,
                     len(active_days),
                     len(set(user.minted_objkts)),
@@ -892,5 +991,5 @@ class TeiaUsers:
                     len(set(list(user.artist_connections.keys()) + 
                             list(user.collector_connections.keys()))),
                     len(user.teia_community_votes))
-                text = ", ".join(format) % data
+                text = ",".join(format) % data
                 file.write(text + "\n")

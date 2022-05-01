@@ -811,6 +811,52 @@ def get_artists_collaborations(offset=0, limit=10000):
     return artists_collaborations
 
 
+def get_artists_collaborations_signatures(offset=0, limit=10000):
+    """Returns a dictionary with all the artists collaborations signatures
+    information.
+
+    Parameters
+    ----------
+    offset: int, optional
+        The number of initial signatures that should be skipped. This is mostly
+        used for pagination. Default is 0.
+    limit: int, optional
+        The maximum number of signatures to return. Default is 10000. The
+        maximum allowed by the API is 10000.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the artists collaborations signatures
+        information.
+
+    """
+    # Get the artists collaborations signatures
+    url = "https://api.tzkt.io/v1/operations/transactions"
+    parameters = {
+        "target": "KT1BcLnWRziLDNJNRn3phAANKrEBiXhytsMY",
+        "entrypoint": "sign",
+        "status": "applied",
+        "offset": offset,
+        "limit": limit
+    }
+    signatures = get_query_result(url, parameters)
+
+    # Build the dictionary with the artists collaborations signatures
+    artists_collaborations_signatures = {}
+
+    for signature in signatures:
+        address = signature["sender"]["address"]
+        objkt_id = signature["parameter"]["value"]
+
+        if address in artists_collaborations_signatures:
+            artists_collaborations_signatures[address].append(objkt_id)
+        else:
+            artists_collaborations_signatures[address] = [objkt_id]
+
+    return artists_collaborations_signatures
+
+
 def get_teia_community_votes():
     """Returns the votes from the Teia Community vote contract.
 
