@@ -85,8 +85,8 @@ restricted_addresses.append("tz1RHRH92Zt3ruxJWwUuu6C7FsrgoVzSCJZj")  # Suspiciou
 restricted_addresses.append("tz1ifgfKyPnptBAAumFFPKMcAV4gaRGTkfN8")  # Suspicious swaps/collects
 users.add_restricted_addresses_information(restricted_addresses)
 
-# Add the user names
-users.add_usernames(hen_registries_bigmap, tzprofiles, wallets)
+# Add the profiles information
+users.add_profiles_information(hen_registries_bigmap, tzprofiles, wallets)
 
 # Add the Teia Community votes information
 votes = get_teia_community_votes()

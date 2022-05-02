@@ -25,11 +25,13 @@ class TeiaUser:
         self.type = None
         self.restricted = False
 
-        # User names
+        # User names and tzprofile
         self.username = None
         self.tzkt_username = None
         self.tzprofiles_username = None
         self.hen_username = None
+        self.tzprofile = None
+        self.verified = False
 
         # hDAO information
         self.hdao = 0
@@ -103,8 +105,8 @@ class TeiaUser:
         self.hdao = hdao
         self.hdao_snapshot_level = level
 
-    def set_usernames(self, registries_bigmap, tzprofiles, wallets):
-        """Sets the user names from different sources.
+    def set_profiles_information(self, registries_bigmap, tzprofiles, wallets):
+        """Sets the user profiles information from different sources.
 
         Parameters
         ----------
@@ -123,20 +125,30 @@ class TeiaUser:
                 self.username = self.tzkt_username
 
         if self.address in tzprofiles:
-            tzprofile = tzprofiles[self.address]
+            self.tzprofile = tzprofiles[self.address]
 
-            if tzprofile["alias"] is not None:
-                self.tzprofiles_username = tzprofile["alias"].strip()
-            elif tzprofile["twitter"] is not None:
-                self.tzprofiles_username = tzprofile["twitter"].strip()
-            elif tzprofile["discord"] is not None:
-                self.tzprofiles_username = tzprofile["discord"].strip()
-            elif tzprofile["github"] is not None:
-                self.tzprofiles_username = tzprofile["github"].strip()
+            if self.tzprofile["alias"] is not None:
+                self.tzprofiles_username = self.tzprofile["alias"].strip()
+            elif self.tzprofile["twitter"] is not None:
+                self.tzprofiles_username = self.tzprofile["twitter"].strip()
+            elif self.tzprofile["discord"] is not None:
+                self.tzprofiles_username = self.tzprofile["discord"].strip()
+            elif self.tzprofile["github"] is not None:
+                self.tzprofiles_username = self.tzprofile["github"].strip()
+            elif self.tzprofile["domain_name"] is not None:
+                self.tzprofiles_username = self.tzprofile["domain_name"].strip()
+            elif self.tzprofile["ethereum"] is not None:
+                self.tzprofiles_username = self.tzprofile["ethereum"].strip()
 
             if ((self.tzprofiles_username is not None) and 
                 (len(self.tzprofiles_username) > 0)):
                 self.username = self.tzprofiles_username
+
+            self.verified = ((self.tzprofile["twitter"] is not None) | 
+                             (self.tzprofile["discord"] is not None) | 
+                             (self.tzprofile["github"] is not None) | 
+                             (self.tzprofile["domain_name"] is not None) | 
+                             (self.tzprofile["ethereum"] is not None))
 
         if self.address in registries_bigmap:
             self.hen_username = registries_bigmap[self.address]["user"].strip()
@@ -697,8 +709,8 @@ class TeiaUsers:
         for address, user in self.users.items():
             user.set_restricted(address in restricted_addresses)
 
-    def add_usernames(self, registries_bigmap, tzprofiles, wallets):
-        """Adds the user names information to the users.
+    def add_profiles_information(self, registries_bigmap, tzprofiles, wallets):
+        """Adds the profiles information to the users.
 
         Parameters
         ----------
@@ -711,7 +723,8 @@ class TeiaUsers:
 
         """
         for address, user in self.users.items():
-            user.set_usernames(registries_bigmap, tzprofiles, wallets)
+            user.set_profiles_information(
+                registries_bigmap, tzprofiles, wallets)
 
     def add_artists_collaborations(self, artists_collaborations,
                                    artists_collaborations_signatures):
@@ -890,20 +903,20 @@ class TeiaUsers:
         """
         # Define the output file columns and their format
         columns = [
-            "username", "address", "type", "restricted", "has_tzprofile",
-            "has_hen_profile", "has_tzkt_profile", "hdao", "first_activity",
-            "last_activity", "first_mint", "last_mint", "first_collect",
-            "last_collect", "first_swap", "last_swap", "activity_period",
-            "active_days", "minted_objkts", "collected_objkts",
-            "swapped_objkts", "money_earned_own_objkts",
-            "money_earned_collaborations_objkts", "money_earned_other_objkts",
-            "money_earned", "money_spent", "collaborations",
-            "connections_to_artists", "connections_to_collectors",
-            "connections_to_users", "teia_votes"]
+            "username", "address", "type", "restricted", "verified",
+            "has_profile", "has_tzprofile", "has_hen_profile",
+            "has_tzkt_profile", "hdao", "first_activity", "last_activity",
+            "first_mint", "last_mint", "first_collect", "last_collect",
+            "first_swap", "last_swap", "activity_period", "active_days",
+            "minted_objkts", "collected_objkts", "swapped_objkts",
+            "money_earned_own_objkts", "money_earned_collaborations_objkts",
+            "money_earned_other_objkts", "money_earned", "money_spent",
+            "collaborations", "connections_to_artists",
+            "connections_to_collectors", "connections_to_users", "teia_votes"]
         format = [
-            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%f", "%s", "%s", "%s",
-            "%s", "%s", "%s", "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%f",
-            "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
+            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r", "%r", "%f", "%s",
+            "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%f", "%i", "%i", "%i",
+            "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -963,6 +976,8 @@ class TeiaUsers:
                     user.address,
                     user.type,
                     user.restricted,
+                    user.verified,
+                    user.username is not None,
                     user.tzprofiles_username is not None,
                     user.hen_username is not None,
                     user.tzkt_username is not None,
