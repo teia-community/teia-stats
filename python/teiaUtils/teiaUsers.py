@@ -49,6 +49,7 @@ class TeiaUser:
         self.mint_timestamps = []
         self.collect_timestamps = []
         self.swap_timestamps = []
+        self.teia_activity_timestamps = []
 
         # OBJKTs information
         self.minted_objkts = []
@@ -230,10 +231,12 @@ class TeiaUser:
         objkt_royalties = int(royalties[objkt_id]["royalties"]) / 1000
         paid_amount = transaction["amount"] / 1e6
 
-        # Get the OBJKT creator, the seller and the collector addresses
+        # Get the OBJKT creator, the seller, the collector and the marketplace
+        # addresses
         creator_address = royalties[objkt_id]["issuer"]
         seller_address = swaps[swap_id]["issuer"]
         collector_address = transaction["sender"]["address"]
+        marketplace_address = transaction["target"]["address"]
 
         # Check if the user is the OBJKT creator
         if self.address == creator_address:
@@ -312,6 +315,9 @@ class TeiaUser:
             self.collect_timestamps.append(timestamp)
             self.collected_objkts.append(objkt_id)
 
+            if marketplace_address == "KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w":
+                self.teia_activity_timestamps.append(timestamp)
+
             # Add the money spent in the collect
             self.money_spent.append(paid_amount)
             self.total_money_spent += paid_amount
@@ -335,9 +341,11 @@ class TeiaUser:
         if self.type not in ["artist", "patron"]:
             self.type = "swapper"
 
-        # Get the id of the swapped OBJKT and the transaction timestamp
+        # Get the id of the swapped OBJKT, the transaction timestamp and the
+        # marketplace address
         objkt_id = transaction["parameter"]["value"]["objkt_id"]
         timestamp = transaction["timestamp"]
+        marketplace_address = transaction["target"]["address"]
 
         # Check if it's the first user activity
         if ((self.first_activity is None) or
@@ -370,6 +378,9 @@ class TeiaUser:
         # Add the timestamp and the OBJKT id to their respective lists
         self.swap_timestamps.append(timestamp)
         self.swapped_objkts.append(objkt_id)
+
+        if marketplace_address == "KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w":
+            self.teia_activity_timestamps.append(timestamp)
 
     def add_artists_collaborations(self, artists_collaborations,
                                    artists_collaborations_signatures, users):
@@ -908,15 +919,17 @@ class TeiaUsers:
             "has_tzkt_profile", "hdao", "first_activity", "last_activity",
             "first_mint", "last_mint", "first_collect", "last_collect",
             "first_swap", "last_swap", "activity_period", "active_days",
-            "minted_objkts", "collected_objkts", "swapped_objkts",
-            "money_earned_own_objkts", "money_earned_collaborations_objkts",
-            "money_earned_other_objkts", "money_earned", "money_spent",
-            "collaborations", "connections_to_artists",
-            "connections_to_collectors", "connections_to_users", "teia_votes"]
+            "teia_active_days", "minted_objkts", "collected_objkts",
+            "swapped_objkts", "money_earned_own_objkts",
+            "money_earned_collaborations_objkts", "money_earned_other_objkts",
+            "money_earned", "money_spent", "collaborations",
+            "connections_to_artists", "connections_to_collectors",
+            "connections_to_users", "teia_votes"]
         format = [
             "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r", "%r", "%f", "%s",
             "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%f", "%i", "%i", "%i",
-            "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
+            "%i", "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i",
+            "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -970,6 +983,10 @@ class TeiaUsers:
                 active_days |= {
                     timestamp[:10] for timestamp in user.swap_timestamps}
 
+                # Calculate how many days the user have been active in Teia
+                teia_active_days = {
+                    timestamp[:10] for timestamp in user.teia_activity_timestamps}
+
                 # Write the user data in the output file
                 data = (
                     username.replace(",", "_").replace(";", "_"),
@@ -992,6 +1009,7 @@ class TeiaUsers:
                     last_swap,
                     active_period,
                     len(active_days),
+                    len(teia_active_days),
                     len(set(user.minted_objkts)),
                     len(set(user.collected_objkts)),
                     len(set(user.swapped_objkts)),
