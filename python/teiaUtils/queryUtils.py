@@ -294,6 +294,79 @@ def get_tzprofiles(batch_size=10000, sleep_time=1):
     return {tzprofile["account"]: tzprofile for tzprofile in tzprofiles}
 
 
+def get_tezos_domains_owners(batch_size=10000, sleep_time=1):
+    """Returns the complete list of tezos domains ordered by the owner wallet.
+
+    Parameters
+    ----------
+    batch_size: int, optional
+        The maximum number of tezos domains per API query. Default is 10000. The
+        maximum allowed by the API is 10000.
+    sleep_time: float, optional
+        The sleep time between API queries in seconds. This is used to avoid
+        being blocked by the server. Default is 1 second.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the tezos domains information.
+
+    """
+    # Download the tezos domains bigmap keys
+    utils.print_info("Downloading the complete list of tezos domains...")
+    tezos_domains = []
+    counter = 0
+
+    while True:
+        utils.print_info("Downloading batch %i" % (counter + 1))
+        url = "https://api.tzkt.io/v1/bigmaps/1264/keys"
+        parameters = {
+            "active": "true",
+            "offset": counter * batch_size,
+            "limit": batch_size
+        }
+        new_tezos_domains = get_query_result(url, parameters)
+        tezos_domains += new_tezos_domains
+
+        if len(new_tezos_domains) != batch_size:
+            break
+
+        time.sleep(sleep_time)
+        counter += 1
+
+    utils.print_info("Downloaded %i tezos domains." % len(tezos_domains))
+
+    # Reorganize the tezos domains information by their current owner
+    tezos_domains_owners = {}
+
+    for tezos_domain in tezos_domains:
+        owner = tezos_domain["value"]["owner"]
+
+        if owner not in tezos_domains_owners:
+            tezos_domains_owners[owner] = []
+
+        domain_data = {}
+
+        for key, value in tezos_domain["value"]["data"].items():
+            if key == "twitter:handle":
+                twitter = utils.hex_to_utf8(value)
+                twitter = twitter.replace('"', "")
+                twitter = twitter[:-1] if twitter.endswith("/") else twitter
+                twitter = twitter.split("/")[-1]
+                twitter = twitter.split("@")[-1]
+                domain_data[key] = twitter
+            else:
+                domain_data[key] = utils.hex_to_utf8(value)
+
+        tezos_domains_owners[owner].append({
+            "address": tezos_domain["value"]["address"],
+            "domain": utils.hex_to_utf8(tezos_domain["key"]),
+            "data": domain_data
+        })
+
+    return tezos_domains_owners
+
+
 def get_transactions(entrypoint, contract, offset=0, limit=10000,
                      timestamp=None, extra_parameters=None):
     """Returns a list of applied transactions ordered by increasing time stamp.

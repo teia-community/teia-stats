@@ -31,6 +31,8 @@ class TeiaUser:
         self.tzprofiles_username = None
         self.hen_username = None
         self.tzprofile = None
+        self.twitter = None
+        self.tezos_domains = []
         self.verified = False
 
         # hDAO information
@@ -106,7 +108,8 @@ class TeiaUser:
         self.hdao = hdao
         self.hdao_snapshot_level = level
 
-    def set_profiles_information(self, registries_bigmap, tzprofiles, wallets):
+    def set_profiles_information(self, registries_bigmap, tzprofiles, wallets,
+                                 tezos_domains_owners):
         """Sets the user profiles information from different sources.
 
         Parameters
@@ -117,8 +120,24 @@ class TeiaUser:
             The complete tzprofiles registered users information.
         wallets: dict
             The complete list of tezos wallets obtained from the TzKt API.
+        tezos_domains_owners: dict
+            The complete list of tezos profiles owners.
 
         """
+        if self.address in tezos_domains_owners:
+            tezos_domains = tezos_domains_owners[self.address]
+
+            for domain in tezos_domains:
+                if self.address == domain["address"]:
+                    self.tezos_domains.append(domain["domain"])
+
+                    if self.username is None:
+                        self.username = domain["domain"]
+
+                    if (("twitter:handle" in domain["data"]) and
+                        (self.twitter is None)):
+                        self.twitter = domain["data"]["twitter:handle"]
+
         if "alias" in wallets[self.address]:
             self.tzkt_username = wallets[self.address]["alias"].strip()
 
@@ -144,6 +163,9 @@ class TeiaUser:
             if ((self.tzprofiles_username is not None) and 
                 (len(self.tzprofiles_username) > 0)):
                 self.username = self.tzprofiles_username
+
+            if self.tzprofile["twitter"] is not None:
+                self.twitter = self.tzprofile["twitter"]
 
             self.verified = ((self.tzprofile["twitter"] is not None) | 
                              (self.tzprofile["discord"] is not None) | 
@@ -720,7 +742,8 @@ class TeiaUsers:
         for address, user in self.users.items():
             user.set_restricted(address in restricted_addresses)
 
-    def add_profiles_information(self, registries_bigmap, tzprofiles, wallets):
+    def add_profiles_information(self, registries_bigmap, tzprofiles, wallets,
+                                 tezos_domains_owners):
         """Adds the profiles information to the users.
 
         Parameters
@@ -731,11 +754,13 @@ class TeiaUsers:
             The complete tzprofiles registered users information.
         wallets: dict
             The complete list of tezos wallets obtained from the TzKt API.
+        tezos_domains_owners: dict
+            The complete list of tezos profiles owners.
 
         """
         for address, user in self.users.items():
             user.set_profiles_information(
-                registries_bigmap, tzprofiles, wallets)
+                registries_bigmap, tzprofiles, wallets, tezos_domains_owners)
 
     def add_artists_collaborations(self, artists_collaborations,
                                    artists_collaborations_signatures):
@@ -914,22 +939,22 @@ class TeiaUsers:
         """
         # Define the output file columns and their format
         columns = [
-            "username", "address", "type", "restricted", "verified",
-            "has_profile", "has_tzprofile", "has_hen_profile",
-            "has_tzkt_profile", "hdao", "first_activity", "last_activity",
-            "first_mint", "last_mint", "first_collect", "last_collect",
-            "first_swap", "last_swap", "activity_period", "active_days",
-            "teia_active_days", "minted_objkts", "collected_objkts",
-            "swapped_objkts", "money_earned_own_objkts",
+            "username", "twitter", "tezos_domain", "address", "type",
+            "restricted", "verified", "has_profile", "has_tzprofile",
+            "has_hen_profile", "has_tzkt_profile", "hdao", "first_activity",
+            "last_activity", "first_mint", "last_mint", "first_collect",
+            "last_collect", "first_swap", "last_swap", "activity_period",
+            "active_days", "teia_active_days", "minted_objkts",
+            "collected_objkts", "swapped_objkts", "money_earned_own_objkts",
             "money_earned_collaborations_objkts", "money_earned_other_objkts",
             "money_earned", "money_spent", "collaborations",
             "connections_to_artists", "connections_to_collectors",
             "connections_to_users", "teia_votes"]
         format = [
-            "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r", "%r", "%f", "%s",
-            "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%f", "%i", "%i", "%i",
-            "%i", "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i", "%i", "%i",
-            "%i"]
+            "%s", "%s", "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r", "%r",
+            "%f", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%f", "%i",
+            "%i", "%i", "%i", "%i", "%f", "%f", "%f", "%f", "%f", "%i", "%i",
+            "%i", "%i", "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -990,6 +1015,8 @@ class TeiaUsers:
                 # Write the user data in the output file
                 data = (
                     username.replace(",", "_").replace(";", "_"),
+                    "" if user.twitter is None else user.twitter,
+                    user.tezos_domains[0] if len(user.tezos_domains) > 0 else "",
                     user.address,
                     user.type,
                     user.restricted,

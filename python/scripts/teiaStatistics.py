@@ -22,6 +22,9 @@ wallets = get_tezos_wallets(wallets_dir, sleep_time=10)
 # Get the complete list of tzprofiles
 tzprofiles = get_tzprofiles(sleep_time=1)
 
+# Get the tezos domains information
+tezos_domains_owners = get_tezos_domains_owners(sleep_time=1)
+
 # Get the complete list of H=N mint, collect, swap and cancel swap transactions
 hen_mints = get_all_transactions("mint", transactions_dir, sleep_time=10)
 hen_mint_objkts = get_all_transactions("mint_OBJKT", transactions_dir, sleep_time=10)
@@ -86,7 +89,8 @@ restricted_addresses.append("tz1ifgfKyPnptBAAumFFPKMcAV4gaRGTkfN8")  # Suspiciou
 users.add_restricted_addresses_information(restricted_addresses)
 
 # Add the profiles information
-users.add_profiles_information(hen_registries_bigmap, tzprofiles, wallets)
+users.add_profiles_information(
+    hen_registries_bigmap, tzprofiles, wallets, tezos_domains_owners)
 
 # Add the Teia Community votes information
 votes = get_teia_community_votes()
@@ -166,8 +170,9 @@ save_figure(os.path.join(figures_dir, "hen_collects_per_day.png"))
 
 plot_transactions_per_day(
     teia_collects, "Teia collect transactions per day",
-    "Days since first minted OBJKT (1st of March)",
-    "Collect transactions per day", exclude_last_day=exclude_last_day)
+    "Days since 18th of March 2022",
+    "Collect transactions per day", first_year=2022, first_month=3,
+    first_day=18, exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "teia_collects_per_day.png"))
 
 plot_transactions_per_day(
@@ -178,8 +183,9 @@ save_figure(os.path.join(figures_dir, "hen_swaps_per_day.png"))
 
 plot_transactions_per_day(
     teia_swaps, "Teia swap transactions per day",
-    "Days since first minted OBJKT (1st of March)",
-    "Swap transactions per day", exclude_last_day=exclude_last_day)
+    "Days since 18th of March 2022",
+    "Swap transactions per day", first_year=2022, first_month=3,
+    first_day=18, exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "teia_swaps_per_day.png"))
 
 plot_transactions_per_day(
@@ -190,8 +196,9 @@ save_figure(os.path.join(figures_dir, "hen_cancel_swaps_per_day.png"))
 
 plot_transactions_per_day(
     teia_cancel_swaps, "Teia cancel_swap transactions per day",
-    "Days since first minted OBJKT (1st of March)",
-    "cancel_swap transactions per day", exclude_last_day=exclude_last_day)
+    "Days since 18th of March 2022",
+    "cancel_swap transactions per day", first_year=2022, first_month=3,
+    first_day=18, exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "teia_cancel_swaps_per_day.png"))
 
 # Plot the new users per day
@@ -237,6 +244,42 @@ plot_new_users_per_day(
     x_label="Days since first minted OBJKT (1st of March)",
     y_label="New users per day", exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "new_users_per_day.png"))
+
+# Get the collected money that doesn't come from a restricted user
+hen_collects_timestamps = []
+hen_collects_money = []
+teia_collects_timestamps = []
+teia_collects_money = []
+
+for collect in hen_collects:
+    if collect["sender"]["address"] not in restricted_addresses:
+        hen_collects_timestamps.append(collect["timestamp"])
+        hen_collects_money.append(collect["amount"] / 1e6)
+
+for collect in teia_collects:
+    if collect["sender"]["address"] not in restricted_addresses:
+        teia_collects_timestamps.append(collect["timestamp"])
+        teia_collects_money.append(collect["amount"] / 1e6)
+
+hen_collects_timestamps = np.array(hen_collects_timestamps)
+hen_collects_money = np.array(hen_collects_money)
+teia_collects_timestamps = np.array(teia_collects_timestamps)
+teia_collects_money = np.array(teia_collects_money)
+
+# Plot the money spent in collect operations per day
+plot_data_per_day(
+    hen_collects_money, hen_collects_timestamps,
+    "Money spent in collect operations per day (H=N contract)",
+    "Days since first minted OBJKT (1st of March)", "Money spent (tez)",
+    exclude_last_day=exclude_last_day)
+save_figure(os.path.join(figures_dir, "hen_money_per_day.png"))
+
+plot_data_per_day(
+    teia_collects_money, teia_collects_timestamps,
+    "Money spent in collect operations per day (Teia contract)",
+    "Days since 18th of March 2022", "Money spent (tez)", first_year=2022,
+    first_month=3, first_day=18, exclude_last_day=exclude_last_day)
+save_figure(os.path.join(figures_dir, "teia_money_per_day.png"))
 
 # Get the addresses and timestamps of each transaction
 addresses = []
@@ -290,6 +333,6 @@ timestamps = np.array(timestamps)
 # Plot the active users per day
 plot_active_users_per_day(
     addresses, timestamps, users, "Teia active users per day",
-    "Days since first minted OBJKT (1st of March)", "Active users per day",
-    exclude_last_day=exclude_last_day)
+    "Days since 18th of March 2022", "Active users per day", first_year=2022,
+    first_month=3, first_day=18, exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "teia_active_users_per_day.png"))
