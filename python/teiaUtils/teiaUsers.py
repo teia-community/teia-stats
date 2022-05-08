@@ -449,6 +449,9 @@ class TeiaUser:
                         if objkt_id not in signed_objkts:
                             continue
 
+                        # Set the user type as artist
+                        self.type = "artist"
+
                         # Check if it's the first user activity
                         if ((self.first_activity is None) or
                             (timestamp < self.first_activity["timestamp"])):
