@@ -710,18 +710,18 @@ class TeiaUsers:
             # Add the swap transaction to the user information
             self.users[address].add_swap_transaction(transaction)
 
-    def add_hdao_information(self, hdao_ledger, level):
+    def add_hdao_information(self, hdao_holders, level):
         """Adds the hDAO information to the users.
 
         Parameters
         ----------
-        hdao_ledger: dict
-            The hDAO ledger bigmap.
+        hdao_holders: dict
+            The hDAO holders.
         level: dict
-            The block level when the hDAO ledger bigmap snapshot has been taken.
+            The block level when the hDAO snapshot has been taken.
 
         """
-        for address, hdao in hdao_ledger.items():
+        for address, hdao in hdao_holders.items():
             # Check that the account still owns some hDAO
             if int(hdao) > 0:
                 # Add a new user if the address is new

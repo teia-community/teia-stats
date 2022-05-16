@@ -1,6 +1,7 @@
 from teiaUtils.queryUtils import *
 from teiaUtils.plotUtils import *
 from teiaUtils.teiaUsers import TeiaUsers
+from teiaUtils.analysisUtils import read_json_file
 
 # Set the path to the directory where the tezos wallets information will be
 # saved to avoid to query for it again and again
@@ -50,10 +51,9 @@ teia_swaps_bigmap = get_teia_bigmap("swaps", transactions_dir, sleep_time=10)
 artists_collaborations = get_artists_collaborations()
 artists_collaborations_signatures = get_artists_collaborations_signatures()
 
-# Get the hDAO ledger bigmap at a given block level
-hdao_snapshot_level = None
-hdao_ledger_bigmap = get_token_bigmap(
-    "ledger", "hDAO", transactions_dir, hdao_snapshot_level, sleep_time=1)
+# Get the hDAO snapshot information
+hdao_snapshot_level = 2361351
+hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
 # Get the Teia users from the mint, collect and swap transactions
 users = TeiaUsers()
@@ -64,7 +64,7 @@ users.add_swap_transactions(hen_swaps)
 users.add_swap_transactions(teia_swaps)
 
 # Include also the hDAO owners
-users.add_hdao_information(hdao_ledger_bigmap, hdao_snapshot_level)
+users.add_hdao_information(hdao_snapshot, hdao_snapshot_level)
 
 # Add the restricted wallets information
 restricted_addresses = get_restricted_addresses()
