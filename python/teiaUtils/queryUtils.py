@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import teiaUtils.analysisUtils as utils
 
 
-def get_query_result(url, parameters=None, timeout=10):
+def get_query_result(url, parameters=None, timeout=30):
     """Executes the given query and returns the result.
 
     Parameters
@@ -17,7 +17,7 @@ def get_query_result(url, parameters=None, timeout=10):
     parameters: dict, optional
         The query parameters. Default is None.
     timeout: float, optional
-        The query timeout in seconds. Default is 10 seconds.
+        The query timeout in seconds. Default is 30 seconds.
 
     Returns
     -------
@@ -33,7 +33,7 @@ def get_query_result(url, parameters=None, timeout=10):
     return None
 
 
-def get_graphql_query_result(url, query, timeout=10):
+def get_graphql_query_result(url, query, timeout=30):
     """Executes the given GraphQL query and returns the result.
 
     Parameters
@@ -43,7 +43,7 @@ def get_graphql_query_result(url, query, timeout=10):
     query: dict
         The GraphQL query.
     timeout: float, optional
-        The query timeout in seconds. Default is 10 seconds.
+        The query timeout in seconds. Default is 30 seconds.
 
     Returns
     -------
@@ -679,7 +679,7 @@ def get_teia_bigmap(name, data_dir, level=None, batch_size=10000, sleep_time=1):
         A python dictionary with the Teia bigmap.
 
     """
-    # Get the HEN bigmap ids
+    # Get the Teia bigmap ids
     if name == "swaps":
         bigmap_ids = [
             "90366",  # KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w
@@ -704,6 +704,36 @@ def get_teia_bigmap(name, data_dir, level=None, batch_size=10000, sleep_time=1):
         bigmap[key]["active"] = bigmap_key["active"]
 
     return bigmap
+
+
+def get_fxhash_usernames(data_dir):
+    """Returns one of the fxhash bigmaps.
+
+    Parameters
+    ----------
+    data_dir: str
+        The complete path to the directory where the fxhash bigmap keys
+        information should be saved.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the fxhash user names.
+
+    """
+    # Get the fxhash user names bigmap keys
+    bigmap_ids = [
+        "21411",  # KT1Ezht4PDKZri7aVppVGT4Jkw39sesaFnww
+    ]
+    bigmap_keys = get_bigmap_keys(bigmap_ids, data_dir)
+
+    # Build the user names dictionary
+    usernames = {}
+
+    for bigmap_key in bigmap_keys:
+        usernames[bigmap_key["key"]] = utils.hex_to_utf8(bigmap_key["value"])
+
+    return usernames
 
 
 def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,

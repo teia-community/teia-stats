@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import numpy as np
 from datetime import datetime
 from calendar import monthrange
@@ -53,6 +54,23 @@ def save_json_file(file_name, data, compact=False):
             json.dump(data, json_file, indent=None, separators=(",", ":"))
         else:
             json.dump(data, json_file, indent=4)
+
+
+def read_csv_file(file_name):
+    """Reads a csv file from disk.
+
+    Parameters
+    ----------
+    file_name: str
+        The complete path to the csv file.
+
+    Returns
+    -------
+    object
+        The content of the csv file.
+
+    """
+    return pd.read_csv(file_name)
 
 
 def hex_to_utf8(hex_string):

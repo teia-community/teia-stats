@@ -1,7 +1,7 @@
 from teiaUtils.queryUtils import *
 from teiaUtils.plotUtils import *
 from teiaUtils.teiaUsers import TeiaUsers
-from teiaUtils.analysisUtils import read_json_file
+from teiaUtils.analysisUtils import read_json_file, read_csv_file
 
 # Set the path to the directory where the tezos wallets information will be
 # saved to avoid to query for it again and again
@@ -25,6 +25,9 @@ tzprofiles = get_tzprofiles(sleep_time=1)
 
 # Get the tezos domains information
 tezos_domains_owners = get_tezos_domains_owners(sleep_time=1)
+
+# Get the fxhash user names
+fxhash_usernames = get_fxhash_usernames(transactions_dir)
 
 # Get the complete list of H=N mint, collect, swap and cancel swap transactions
 hen_mints = get_all_transactions("mint", transactions_dir, sleep_time=10)
@@ -55,6 +58,11 @@ artists_collaborations_signatures = get_artists_collaborations_signatures()
 hdao_snapshot_level = 2361351
 hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
+# Get the users collaboration levels
+collaboration_levels = read_csv_file("../data/teiaCollaborators.csv")
+collaboration_levels = collaboration_levels.set_index("address")
+collaboration_levels = collaboration_levels.to_dict()["level"]
+
 # Get the Teia users from the mint, collect and swap transactions
 users = TeiaUsers()
 users.add_mint_transactions(hen_mints, hen_mint_objkts)
@@ -65,6 +73,9 @@ users.add_swap_transactions(teia_swaps)
 
 # Include also the hDAO owners
 users.add_hdao_information(hdao_snapshot, hdao_snapshot_level)
+
+# Add the users collaboration levels
+users.add_collaboration_level_information(collaboration_levels)
 
 # Add the restricted wallets information
 restricted_addresses = get_restricted_addresses()
@@ -90,7 +101,7 @@ users.add_restricted_addresses_information(restricted_addresses)
 
 # Add the profiles information
 users.add_profiles_information(
-    hen_registries_bigmap, tzprofiles, wallets, tezos_domains_owners)
+    hen_registries_bigmap, tzprofiles, wallets, tezos_domains_owners, fxhash_usernames)
 
 # Add the Teia Community votes information
 votes = get_teia_community_votes()
