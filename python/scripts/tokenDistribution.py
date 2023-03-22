@@ -28,46 +28,52 @@ users["type"].value_counts()
 
 # Define the total number of TEIA tokens to distribute between users based on
 # their activity
-total_activity_amount = 2.5e6
+total_activity_amount = 1.5e6
 
 # Calculate the TEIA token scaling factor based on the users registration info
 # and the days they have been active at the site
-sf = (1 + 1 * users["has_profile"] + 1 * users["verified"])
+sf = (1 + 0.5 * users["has_profile"] + 0.5 * users["verified"])
 sf[users["active_days"] < 7] = 0
+sf[users["collaboration_level"] == 1] = 5
+sf[users["collaboration_level"] == 2] = 8
 users["scaling_factor"] = sf
 
 # Calculate the TEIA tokens that users will get based on their activity
 amount = sf * users["active_days"]
-users["activity_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["activity_amount"] = 0.18 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their Teia activity
 amount = sf * users["teia_active_days"]
-users["teia_activity_amount"] = 0.05 * total_activity_amount * amount / amount.sum()
+users["teia_activity_amount"] = 0.11 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get because they participated in
 # the last Teia votes
 amount = sf * users["teia_votes"].pow(0.5)
-users["voting_amount"] = 0.05 * total_activity_amount * amount / amount.sum()
+users["voting_amount"] = 0.14 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their minted OBJKTs
 amount = sf * users["minted_objkts"].pow(0.5)
-users["minting_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["minting_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their collected OBJKTs
 amount = sf * users["collected_objkts"] .pow(0.5)
-users["collecting_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["collecting_amount"] = 0.11 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their connections
 amount = sf * users["connections_to_users"].pow(0.5)
-users["connections_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["connections_amount"] = 0.18 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that artists will get based on their earnings
 amount = sf * users["money_earned_own_objkts"].pow(0.5)
-users["earnings_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["earnings_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that collectors will get based on their spending
 amount = sf * users["money_spent"].pow(0.5)
-users["spending_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
+users["spending_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
+
+# Calculate the TEIA tokens that collectors will get based on their spending
+amount = sf * users["collaboration_level"]
+users["collaboration_amount"] = 0.04 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their hDAO
 amount = users["hdao"]
@@ -82,7 +88,8 @@ users["total_activity_amount"] = (
     users["collecting_amount"] + 
     users["connections_amount"] + 
     users["earnings_amount"] + 
-    users["spending_amount"])
+    users["spending_amount"] +
+    users["collaboration_amount"])
 users["total_amount"] = users["total_activity_amount"] + users["hdao_amount"]
 
 # Order the users data by the total amount of TEIA tokens that they will receive
@@ -104,15 +111,16 @@ plt.show()
 # Save the data into a csv file
 columns_to_save = [
     "username", "type", "twitter", "verified", "has_profile", "hdao",
-    "first_activity", "last_activity", "active_days", "minted_objkts",
-    "collected_objkts", "swapped_objkts", "money_earned_own_objkts",
-    "money_earned_other_objkts", "money_earned", "money_spent",
-    "collaborations", "connections_to_artists", "connections_to_collectors",
-    "connections_to_users", "teia_votes", "scaling_factor", "activity_amount",
+    "collaboration_level", "first_activity", "last_activity", "active_days",
+    "teia_active_days", "minted_objkts", "collected_objkts", "swapped_objkts",
+    "money_earned_own_objkts", "money_earned_other_objkts", "money_earned",
+    "money_spent", "collaborations", "connections_to_artists",
+    "connections_to_collectors", "connections_to_users", "teia_votes",
+    "scaling_factor", "activity_amount", "teia_activity_amount",
     "voting_amount", "minting_amount", "collecting_amount",
-    "connections_amount", "earnings_amount", "spending_amount", "hdao_amount",
-    "total_amount"]
-users[columns_to_save].to_csv("../data/token_distribution_25.csv")
+    "connections_amount", "earnings_amount", "spending_amount",
+    "collaboration_amount", "hdao_amount", "total_amount"]
+users[columns_to_save].to_csv("../data/token_distribution_15.csv")
 
 file_name = "/home/jgracia/drop.ts"
 total = 0

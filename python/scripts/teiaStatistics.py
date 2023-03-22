@@ -59,7 +59,7 @@ hdao_snapshot_level = 2361351
 hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
 # Get the users collaboration levels
-collaboration_levels = read_csv_file("../data/teiaCollaborators.csv")
+collaboration_levels = read_csv_file("../data/teiaCollaborationLevels.csv")
 collaboration_levels = collaboration_levels.set_index("address")
 collaboration_levels = collaboration_levels.to_dict()["level"]
 
