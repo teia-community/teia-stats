@@ -71,7 +71,7 @@ users["earnings_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 amount = sf * users["money_spent"].pow(0.5)
 users["spending_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
-# Calculate the TEIA tokens that collectors will get based on their spending
+# Calculate the TEIA tokens that users will get based on their collaboration level
 amount = sf * users["collaboration_level"]
 users["collaboration_amount"] = 0.04 * total_activity_amount * amount / amount.sum()
 
@@ -100,7 +100,7 @@ columns = [
     "username", "type", "twitter", "verified", "hdao", "activity_amount",
     "teia_activity_amount", "voting_amount", "minting_amount",
     "collecting_amount", "connections_amount", "earnings_amount",
-    "spending_amount", "hdao_amount", "total_amount"]
+    "spending_amount", "collaboration_amount", "hdao_amount", "total_amount"]
 users[columns][:50]
 
 # Plot a histogram of the total amount of TEIA tokens per each user
@@ -122,6 +122,12 @@ columns_to_save = [
     "collaboration_amount", "hdao_amount", "total_amount"]
 users[columns_to_save].to_csv("../data/token_distribution_15.csv")
 
+
+
+
+
+
+"""
 file_name = "/home/jgracia/drop.ts"
 total = 0
 
@@ -165,3 +171,4 @@ while start < len(addresses):
     counter += 1
 
 save_json_file("/home/jgracia/mapping.json", mapping, compact=True)
+"""

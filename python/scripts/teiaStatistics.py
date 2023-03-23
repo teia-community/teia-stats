@@ -107,7 +107,8 @@ users.add_profiles_information(
 votes = get_teia_community_votes()
 polls = ["QmU7zZepzHiLMUme1xRHZyTdbyD4j2EfUodiGJeA1Rv6QQ",
          "QmVSWZZcBT6zRrcZM6hf9VZJ7Qha5GXUBScQowJJ7fYQxT",
-         "QmPDYWmGdxae8gUxqiPa4rkuQCc8P6sggLvUi5HQrrCzug"]
+         "QmPDYWmGdxae8gUxqiPa4rkuQCc8P6sggLvUi5HQrrCzug",
+         "QmQdgL954By1DNuam2abaQd4B8o9UzWaJgrfsK9xjabWQg"]
 users.add_teia_community_votes(votes, polls)
 
 # Add the artists collaborations information
@@ -152,7 +153,7 @@ for i, address in enumerate(top_100_selling_artists_addresses):
         print(" %3i: Artist %s sold for %6.0f tez" % (
             i + 1, artist.address, artist.total_money_earned_own_objkts))
 
-# Print  the top collectors
+# Print the top collectors
 print("\n This is the list of the top collectors:\n")
 top_100_collectors_addresses = users.get_top_collectors(100)
 

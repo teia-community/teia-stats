@@ -263,7 +263,7 @@ def get_tzprofiles(batch_size=10000, sleep_time=1):
 
     while True:
         utils.print_info("Downloading batch %i" % (counter + 1))
-        url = "https://unstable-do-not-use-in-production-api.teztok.com/v1/graphql"
+        url = "https://api.teztok.com/v1/graphql"
         graphql_query = """query TzProfiles {
             tzprofiles(distinct_on: account, order_by: {}, limit: %i, offset: %i) {
                 alias
