@@ -24,6 +24,7 @@ class TeiaUser:
         self.id = id
         self.type = None
         self.restricted = False
+        self.wash_trader = False
 
         # User names and tzprofile
         self.username = None
@@ -42,7 +43,7 @@ class TeiaUser:
         self.hdao_snapshot_level = None
 
         # Activity information
-        self.collaboration_level = 0
+        self.contribution_level = 0
         self.first_activity = None
         self.last_activity = None
         self.first_mint = None
@@ -92,6 +93,17 @@ class TeiaUser:
         """
         self.restricted = is_restricted
 
+    def set_wash_trader(self, is_wash_trader):
+        """Sets the user as wash trader or not.
+
+        Parameters
+        ----------
+        is_wash_trader: bool
+            True if the user was involved in wash trading activity.
+
+        """
+        self.wash_trader = is_wash_trader
+
     def set_hdao(self, hdao, level=None):
         """Sets the amount of hDAO owned by the user at a given block level.
 
@@ -111,17 +123,20 @@ class TeiaUser:
         self.hdao = hdao
         self.hdao_snapshot_level = level
 
-    def set_collaboration_level(self, level):
-        """Sets the user teia collaboration level.
+    def set_contribution_level(self, level):
+        """Sets the user teia contribution level.
 
         Parameters
         ----------
         level: int
-            The user collaboration level.
+            The user contribution level.
 
         """
-        # Set the user type as hDAO owner if it has not type defined
-        self.collaboration_level = level
+        # Set the user type as contributor if it has not type defined
+        if self.type is None:
+            self.type = "contributor"
+
+        self.contribution_level = level
 
     def set_profiles_information(self, registries_bigmap, tzprofiles, wallets,
                                  tezos_domains_owners, fxhash_usernames):
@@ -766,24 +781,24 @@ class TeiaUsers:
                 # Set the user hDAO amount
                 self.users[address].set_hdao(int(hdao), level)
 
-    def add_collaboration_level_information(self, collaboration_levels):
-        """Adds the collaboration level information to the users.
+    def add_contribution_level_information(self, contribution_levels):
+        """Adds the contribution level information to the users.
 
         Parameters
         ----------
-        collaboration_levels: dict
-            The collaboration level for the most active users.
+        contribution_levels: dict
+            The contribution level for the most active users.
 
         """
-        for address, level in collaboration_levels.items():
+        for address, level in contribution_levels.items():
             # Add a new user if the address is new
             if address not in self.users:
                 id = len(self.users)
                 self.users[address] = TeiaUser(address, id)
                 self.id_to_address[id] = address
 
-            # Set the user collaboration level
-            self.users[address].set_collaboration_level(level)
+            # Set the user contribution level
+            self.users[address].set_contribution_level(level)
 
     def add_restricted_addresses_information(self, restricted_addresses):
         """Adds the restricted addresses information to the users.
@@ -796,6 +811,18 @@ class TeiaUsers:
         """
         for address, user in self.users.items():
             user.set_restricted(address in restricted_addresses)
+
+    def add_wash_trading_addresses_information(self, wash_trading_addresses):
+        """Adds the wash trading addresses information to the users.
+
+        Parameters
+        ----------
+        wash_trading_addresses: list
+            The python list with the wash trading addresses.
+
+        """
+        for address, user in self.users.items():
+            user.set_wash_trader(address in wash_trading_addresses)
 
     def add_profiles_information(self, registries_bigmap, tzprofiles, wallets,
                                  tezos_domains_owners, fxhash_usernames):
@@ -865,12 +892,17 @@ class TeiaUsers:
         Parameters
         ----------
         filter_selection: string
-            The filter selection: artists, patrons, collectors, swappers,
-            hdao_owners, restricted, not_restricted, collaborations, contract,
-            not_contract.
+            The filter selection: contributors, artists, patrons, collectors,
+            swappers, hdao_owners, restricted, not_restricted, wash_traders,
+            not_wash_traders, collaborations, contract, not_contract.
 
         """
         selected_users = {}
+
+        if filter_selection == "contributors":
+            for address, user in self.users.items():
+                if user.contribution_level > 0:
+                    selected_users[address] = user
 
         if filter_selection == "artists":
             for address, user in self.users.items():
@@ -912,6 +944,16 @@ class TeiaUsers:
                 if not user.restricted:
                     selected_users[address] = user
 
+        if filter_selection == "wash_traders":
+            for address, user in self.users.items():
+                if user.wash_trader:
+                    selected_users[address] = user
+
+        if filter_selection == "not_wash_traders":
+            for address, user in self.users.items():
+                if not user.wash_trader:
+                    selected_users[address] = user
+
         if filter_selection == "collaborations":
             for address, user in self.users.items():
                 if user.type == "collaboration":
@@ -949,10 +991,10 @@ class TeiaUsers:
         # their own OBJKTs
         addresses = np.array([
             user.address for user in self.users.values()
-            if not user.restricted]) 
+            if ((not user.restricted) and (not user.wash_trader))]) 
         total_money_earned_own_objkts = np.array([
             user.total_money_earned_own_objkts for user in self.users.values()
-            if not user.restricted])
+            if ((not user.restricted) and (not user.wash_trader))])
 
         # Return the user addresses ordered by the total money earned
         return addresses[total_money_earned_own_objkts.argsort()[::-1]][:n]
@@ -977,10 +1019,10 @@ class TeiaUsers:
         # Get the addresses and the total money spent by each user
         addresses = np.array([
             user.address for user in self.users.values()
-            if not user.restricted]) 
+            if ((not user.restricted) and (not user.wash_trader))]) 
         total_money_spent = np.array([
             user.total_money_spent for user in self.users.values()
-            if not user.restricted])
+            if ((not user.restricted) and (not user.wash_trader))])
 
         # Return the user addresses ordered by the total money spent
         return addresses[total_money_spent.argsort()[::-1]][:n]
@@ -998,22 +1040,22 @@ class TeiaUsers:
         # Define the output file columns and their format
         columns = [
             "username", "twitter", "discord", "tezos_domain", "address", "type",
-            "restricted", "verified", "has_profile", "has_tzprofile",
-            "has_hen_profile", "has_tzkt_profile", "has_fxhash_profile", "hdao",
-            "collaboration_level", "first_activity", "last_activity",
-            "first_mint", "last_mint", "first_collect", "last_collect",
-            "first_swap", "last_swap", "activity_period", "active_days",
-            "teia_active_days", "minted_objkts", "collected_objkts",
-            "swapped_objkts", "money_earned_own_objkts",
-            "money_earned_collaborations_objkts", "money_earned_other_objkts",
-            "money_earned", "money_spent", "collaborations",
-            "connections_to_artists", "connections_to_collectors",
-            "connections_to_users", "teia_votes"]
+            "restricted", "wash_trader", "verified", "has_profile",
+            "has_tzprofile", "has_hen_profile", "has_tzkt_profile",
+            "has_fxhash_profile", "hdao", "contribution_level",
+            "first_activity", "last_activity", "first_mint", "last_mint",
+            "first_collect", "last_collect", "first_swap", "last_swap",
+            "activity_period", "active_days", "teia_active_days",
+            "minted_objkts", "collected_objkts", "swapped_objkts",
+            "money_earned_own_objkts", "money_earned_collaborations_objkts",
+            "money_earned_other_objkts", "money_earned", "money_spent",
+            "collaborations", "connections_to_artists",
+            "connections_to_collectors", "connections_to_users", "teia_votes"]
         format = [
             "%s", "%s", "%s", "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r",
-            "%r", "%r", "%f", "%i", "%s", "%s", "%s", "%s", "%s", "%s", "%s",
-            "%s", "%f", "%i", "%i", "%i", "%i", "%i", "%f", "%f", "%f", "%f",
-            "%f", "%i", "%i", "%i", "%i", "%i"]
+            "%r", "%r", "%r", "%f", "%i", "%s", "%s", "%s", "%s", "%s", "%s",
+            "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%i", "%f", "%f", "%f",
+            "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -1080,6 +1122,7 @@ class TeiaUsers:
                     user.address,
                     user.type,
                     user.restricted,
+                    user.wash_trader,
                     user.verified,
                     user.username is not None,
                     user.tzprofiles_username is not None,
@@ -1087,7 +1130,7 @@ class TeiaUsers:
                     user.tzkt_username is not None,
                     user.fxhash_username is not None,
                     user.hdao / 1e6,
-                    user.collaboration_level,
+                    user.contribution_level,
                     first_activity,
                     last_activity,
                     first_mint,

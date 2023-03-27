@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import teiaUtils.analysisUtils as utils
 
 
-def get_query_result(url, parameters=None, timeout=30):
+def get_query_result(url, parameters=None, timeout=120):
     """Executes the given query and returns the result.
 
     Parameters
@@ -33,7 +33,7 @@ def get_query_result(url, parameters=None, timeout=30):
     return None
 
 
-def get_graphql_query_result(url, query, timeout=30):
+def get_graphql_query_result(url, query, timeout=120):
     """Executes the given GraphQL query and returns the result.
 
     Parameters

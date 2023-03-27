@@ -58,10 +58,10 @@ artists_collaborations_signatures = get_artists_collaborations_signatures()
 hdao_snapshot_level = 2361351
 hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
-# Get the users collaboration levels
-collaboration_levels = read_csv_file("../data/teiaCollaborationLevels.csv")
-collaboration_levels = collaboration_levels.set_index("address")
-collaboration_levels = collaboration_levels.to_dict()["level"]
+# Get the users contribution levels
+contribution_levels = read_csv_file("../data/teiaContributionLevels.csv")
+contribution_levels = contribution_levels.set_index("address")
+contribution_levels = contribution_levels.to_dict()["level"]
 
 # Get the Teia users from the mint, collect and swap transactions
 users = TeiaUsers()
@@ -75,29 +75,32 @@ users.add_swap_transactions(teia_swaps)
 users.add_hdao_information(hdao_snapshot, hdao_snapshot_level)
 
 # Add the users collaboration levels
-users.add_collaboration_level_information(collaboration_levels)
+users.add_contribution_level_information(contribution_levels)
 
 # Add the restricted wallets information
 restricted_addresses = get_restricted_addresses()
-restricted_addresses.append("tz1eee5rapGDbq2bcZYTQwNbrkB4jVSQSSHx")  # hDAO wash trading
-restricted_addresses.append("tz1bpz9S6JyBzMvJ97qPL7TeejkUiLjdkDAm")  # hDAO wash trading
-restricted_addresses.append("tz2UuUoPpH51i6PTt9Bc7iBZ4ibhHUsczcwY")  # hDAO wash trading
-restricted_addresses.append("tz1bhMc5uPJynkrHpw7pAiBt6YMhQktn7owF")  # hDAO wash trading
-restricted_addresses.append("tz1VWBwFKLq6TCrPEVU8sZDfrcbx9buqMxnZ")  # hDAO wash trading
-restricted_addresses.append("tz1e52CpddrybiDgawzvqRPXthy2hbAWGJba")  # hDAO wash trading
-restricted_addresses.append("tz1Uby674S4xEw8w7iuM3GEkWZ3fHeHjT696")  # hDAO wash trading
-restricted_addresses.append("tz1bhMc5uPJynkrHpw7pAiBt6YMhQktn7owF")  # hDAO wash trading
-restricted_addresses.append("tz1U3YJZ1pFfkaUWZVWv7FvNyiUi5vKYG696")  # hDAO wash trading
-restricted_addresses.append("tz1Us9HFxfVZUZ5rn1Y9gYh3LkiS9nEDGmZS")  # hDAO wash trading
-restricted_addresses.append("tz1f7zNRyNpBbNRx9xa4jW6XYgZdSYMH777n")  # Suspicious swaps/collects
-restricted_addresses.append("tz1gSs2PFWtUXA5BjGzfXW2xTGaSQTvyZK2w")  # Suspicious swaps/collects
-restricted_addresses.append("tz1biNdKY6ddqn1E7XMyCJLjJKNX8NMeZo4Z")  # Suspicious swaps/collects
-restricted_addresses.append("tz1i7Uj8fFQ8vwdMkqGYTAhfYqPUGHxnVgTg")  # Suspicious swaps/collects
-restricted_addresses.append("tz1aMnb63FDRwG5RYZG76HwrLinK7h9VT48H")  # Suspicious swaps/collects
-restricted_addresses.append("tz1SUPNYXG7e1Zjn1WPuUFfEFmLJY7KrwPDw")  # Suspicious swaps/collects
-restricted_addresses.append("tz1RHRH92Zt3ruxJWwUuu6C7FsrgoVzSCJZj")  # Suspicious swaps/collects
-restricted_addresses.append("tz1ifgfKyPnptBAAumFFPKMcAV4gaRGTkfN8")  # Suspicious swaps/collects
 users.add_restricted_addresses_information(restricted_addresses)
+
+# Add the wash trading addresses information
+wash_trading_addresses = [
+    "tz1eee5rapGDbq2bcZYTQwNbrkB4jVSQSSHx",  # hDAO wash trading
+    "tz1bpz9S6JyBzMvJ97qPL7TeejkUiLjdkDAm",  # hDAO wash trading
+    "tz2UuUoPpH51i6PTt9Bc7iBZ4ibhHUsczcwY",  # hDAO wash trading
+    "tz1bhMc5uPJynkrHpw7pAiBt6YMhQktn7owF",  # hDAO wash trading
+    "tz1VWBwFKLq6TCrPEVU8sZDfrcbx9buqMxnZ",  # hDAO wash trading
+    "tz1e52CpddrybiDgawzvqRPXthy2hbAWGJba",  # hDAO wash trading
+    "tz1Uby674S4xEw8w7iuM3GEkWZ3fHeHjT696",  # hDAO wash trading
+    "tz1U3YJZ1pFfkaUWZVWv7FvNyiUi5vKYG696",  # hDAO wash trading
+    "tz1Us9HFxfVZUZ5rn1Y9gYh3LkiS9nEDGmZS",  # hDAO wash trading
+    "tz1f7zNRyNpBbNRx9xa4jW6XYgZdSYMH777n",  # Suspicious swaps/collects
+    "tz1gSs2PFWtUXA5BjGzfXW2xTGaSQTvyZK2w",  # Suspicious swaps/collects
+    "tz1biNdKY6ddqn1E7XMyCJLjJKNX8NMeZo4Z",  # Suspicious swaps/collects
+    "tz1i7Uj8fFQ8vwdMkqGYTAhfYqPUGHxnVgTg",  # Suspicious swaps/collects
+    "tz1aMnb63FDRwG5RYZG76HwrLinK7h9VT48H",  # Suspicious swaps/collects
+    "tz1SUPNYXG7e1Zjn1WPuUFfEFmLJY7KrwPDw",  # Suspicious swaps/collects
+    "tz1RHRH92Zt3ruxJWwUuu6C7FsrgoVzSCJZj",  # Suspicious swaps/collects
+    "tz1ifgfKyPnptBAAumFFPKMcAV4gaRGTkfN8"]  # Suspicious swaps/collects
+users.add_wash_trading_addresses_information(wash_trading_addresses)
 
 # Add the profiles information
 users.add_profiles_information(
@@ -126,6 +129,7 @@ hdao_owners = users.select("hdao_owners").select("not_restricted").select("not_c
 collaborations = users.select("collaborations").select("not_restricted")
 contracts = users.select("contract").select("not_restricted")
 restricted = users.select("restricted")
+wash_traders = users.select("wash_traders")
 
 # Save as a csv file the complete list of users, excluding contracts
 users.select("not_contract").save_as_csv_file("../data/teia_users.csv")
@@ -318,10 +322,17 @@ timestamps = np.array(timestamps)
 
 # Plot the active users per day
 plot_active_users_per_day(
-    addresses, timestamps, users, "Active users per day",
+    addresses, timestamps, users, "H=N active users per day",
     "Days since first minted OBJKT (1st of March)", "Active users per day",
     exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "hen_active_users_per_day.png"))
+
+# Plot the active users per month
+plot_active_users_per_month(
+    addresses, timestamps, users, "H=N active users per month",
+    "Months since first minted OBJKT (1st of March)", "Active users per month",
+    exclude_last_month=False)
+save_figure(os.path.join(figures_dir, "hen_active_users_per_month.png"))
 
 # Get the addresses and timestamps of each transaction
 addresses = []
@@ -348,3 +359,10 @@ plot_active_users_per_day(
     "Days since 18th of March 2022", "Active users per day", first_year=2022,
     first_month=3, first_day=18, exclude_last_day=exclude_last_day)
 save_figure(os.path.join(figures_dir, "teia_active_users_per_day.png"))
+
+# Plot the active users per month
+plot_active_users_per_month(
+    addresses, timestamps, users, "Teia active users per month",
+    "Months since 18th of March 2022", "Active users per month", first_year=2022,
+    first_month=3, exclude_last_month=False)
+save_figure(os.path.join(figures_dir, "teia_active_users_per_month.png"))

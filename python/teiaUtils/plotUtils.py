@@ -112,7 +112,7 @@ def plot_new_users_per_day(users, title, x_label, y_label,
 
     """
     # Get the users per day
-    timestamps = [user.first_activity["timestamp"] for user in users.values()]
+    timestamps = [user.first_activity["timestamp"] for user in users.values() if user.first_activity is not None]
     users_per_day = get_counts_per_day(
         timestamps, first_year=first_year, first_month=first_month,
         first_day=first_day)
@@ -385,6 +385,74 @@ def plot_active_users_per_day(addresses, timestamps, users, title, x_label,
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.plot(active_users_per_day)
+    plt.show(block=False)
+
+
+def plot_active_users_per_month(addresses, timestamps, users, title, x_label,
+                                y_label, exclude_last_month=False,
+                                first_year=2021, first_month=3, **kwargs):
+    """Plots the active users per month as a function of time.
+
+    Parameters
+    ----------
+    addresses: object
+        A numpy array with the address associated to each transaction.
+    timestamps: object
+        A numpy array with the timestamps of each transaction.
+    users: TeiaUsers
+        A TeiaUsers instance with the users information.
+    title: str
+        The plot title.
+    x_label: str
+        The label for the x axis.
+    y_label: str
+        The label for the y axis.
+    exclude_last_month: bool, optional
+        If True the last month will be excluded from the plot. Default is False.
+    first_year: int, optional
+        The first year to count. Default is 2021.
+    first_month: int, optional
+        The first month to count. Default is 3 (March).
+    kwargs: plt.figure properties
+        Any additional property that should be passed to the figure.
+
+    """
+    # Extract the years, months and days from the time stamps
+    years, months, days = split_timestamps(timestamps)
+
+    # Get the active users, artists and patrons per day
+    active_users_per_month = []
+    started = False
+    finished = False
+    now = datetime.utcnow()
+
+    for year in range(first_year, np.max(years) + 1):
+        for month in range(1, 13):
+            # Check if we passed the starting month
+            if not started:
+                started = ((year == first_year) and 
+                           (month == first_month))
+
+            # Check that we started and didn't finish yet
+            if started and not finished:
+                # Get the number of unique users for the current month
+                unique_users = np.unique(addresses[
+                    (years == year) & (months == month)])
+                active_users_per_month.append(len(unique_users))
+
+                # Check if we reached the last day
+                finished = ((year == now.year) and
+                            (month == now.month))
+
+    if exclude_last_month:
+        active_users_per_month = active_users_per_month[:-1]
+
+    # Create the figure
+    plt.figure(figsize=(7, 5), facecolor="white", tight_layout=True, **kwargs)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.plot(active_users_per_month)
     plt.show(block=False)
 
 
