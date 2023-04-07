@@ -239,6 +239,74 @@ def get_tezos_wallets(data_dir, batch_size=10000, sleep_time=1):
     return {wallet["address"]: wallet for wallet in wallets}
 
 
+def get_users_tzkt_metadata(data_dir, users, sleep_time=0.01):
+    """Returns the users tzkt metadata.
+
+    Parameters
+    ----------
+    data_dir: str
+        The complete path to the directory where the users wallets metadata
+        information should be saved.
+    sleep_time: float, optional
+        The sleep time between API queries in seconds. This is used to avoid
+        being blocked by the server. Default is 0.05 seconds.
+
+    Returns
+    -------
+    dict
+        A python dictionary with the users tzkt metadata information.
+
+    """
+    utils.print_info("Downloading the complete list of users tzkt metadata...")
+    users_metadata = {}
+    batch_size = 1000
+    batch_counter = 0
+
+    while True:
+        offset = batch_counter * batch_size
+        batch = batch_counter + 1
+
+        file_name = os.path.join(
+            data_dir, "users_tzkt_metadata_%i-%i.json" % (
+                offset, offset + batch_size))
+
+        if os.path.exists(file_name):
+            utils.print_info(
+                "Reading batch %i from local json file." % batch)
+            tzkt_metadata = utils.read_json_file(file_name)
+
+            for metadata in tzkt_metadata:
+                users_metadata[metadata["address"]] = metadata["metadata"] if "metadata" in metadata else {}
+        else:
+            utils.print_info("Downloading batch %i" % batch)
+            new_metadata = []
+            metadata_counter = 0
+
+            for wallet in users:
+                if metadata_counter == batch_size:
+                    break
+                elif wallet not in users_metadata:
+                    url = "https://api.tzkt.io/v1/accounts/%s" % wallet
+                    parameters = {}
+                    metadata = get_query_result(url, parameters)
+                    new_metadata += [metadata]
+                    metadata_counter += 1
+                    users_metadata[metadata["address"]] = metadata["metadata"] if "metadata" in metadata else {}
+                    time.sleep(sleep_time)
+
+            if len(new_metadata) != batch_size:
+                break
+
+            utils.print_info("Saving batch %i in the output directory" % batch)
+            utils.save_json_file(file_name, new_metadata)
+
+        batch_counter += 1
+
+    utils.print_info("Downloaded %i users metadata." % len(users_metadata))
+
+    return users_metadata
+
+
 def get_tzprofiles(batch_size=10000, sleep_time=1):
     """Returns the complete list of tzprofiles ordered by their wallet.
 

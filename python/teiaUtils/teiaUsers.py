@@ -32,6 +32,7 @@ class TeiaUser:
         self.tzprofiles_username = None
         self.hen_username = None
         self.fxhash_username = None
+        self.tzkt_metadata = None
         self.tzprofile = None
         self.twitter = None
         self.discord = None
@@ -138,8 +139,9 @@ class TeiaUser:
 
         self.contribution_level = level
 
-    def set_profiles_information(self, registries_bigmap, tzprofiles, wallets,
-                                 tezos_domains_owners, fxhash_usernames):
+    def set_profiles_information(self, registries_bigmap, tzprofiles,
+                                 tzkt_metadata, tezos_domains_owners,
+                                 fxhash_usernames):
         """Sets the user profiles information from different sources.
 
         Parameters
@@ -148,8 +150,8 @@ class TeiaUser:
             The H=N registries bigmap.
         tzprofiles: dict
             The complete tzprofiles registered users information.
-        wallets: dict
-            The complete list of tezos wallets obtained from the TzKt API.
+        tzkt_metadata: dict
+            The users tzkt metadata.
         tezos_domains_owners: dict
             The complete list of tezos profiles owners.
         fxhash_usernames: dict
@@ -180,11 +182,30 @@ class TeiaUser:
                         (self.twitter is None)):
                         self.twitter = domain["data"]["twitter:handle"]
 
-        if "alias" in wallets[self.address]:
-            self.tzkt_username = wallets[self.address]["alias"].strip()
+        if len(tzkt_metadata[self.address]) > 0:
+            self.tzkt_metadata = tzkt_metadata[self.address]
+            self.tzkt_username = self.tzkt_metadata["alias"].strip()
 
             if len(self.tzkt_username) > 0:
                 self.username = self.tzkt_username
+
+            if "twitter" in self.tzkt_metadata:
+                self.twitter = self.tzkt_metadata["twitter"].split("?")[0]
+
+            if "discord" in self.tzkt_metadata:
+                self.discord = self.tzkt_metadata["discord"]
+                self.discord = self.discord.replace('"', "")
+                self.discord = self.discord.replace(",", " ")
+                self.discord = self.discord.strip()
+
+            self.verified = (self.verified or
+                             ("twitter" in self.tzkt_metadata) or
+                             ("discord" in self.tzkt_metadata) or
+                             ("github" in self.tzkt_metadata) or
+                             ("gitlab" in self.tzkt_metadata) or
+                             ("facebook" in self.tzkt_metadata) or
+                             ("reddit" in self.tzkt_metadata) or
+                             ("instagram" in self.tzkt_metadata))
 
         if self.address in tzprofiles:
             self.tzprofile = tzprofiles[self.address]
@@ -215,10 +236,11 @@ class TeiaUser:
                 self.discord = self.discord.replace(",", " ")
                 self.discord = self.discord.strip()
 
-            self.verified = ((self.tzprofile["twitter"] is not None) | 
-                             (self.tzprofile["discord"] is not None) | 
-                             (self.tzprofile["github"] is not None) | 
-                             (self.tzprofile["domain_name"] is not None) | 
+            self.verified = (self.verified or
+                             (self.tzprofile["twitter"] is not None) or
+                             (self.tzprofile["discord"] is not None) or
+                             (self.tzprofile["github"] is not None) or
+                             (self.tzprofile["domain_name"] is not None) or
                              (self.tzprofile["ethereum"] is not None))
 
         if self.address in registries_bigmap:
@@ -824,8 +846,9 @@ class TeiaUsers:
         for address, user in self.users.items():
             user.set_wash_trader(address in wash_trading_addresses)
 
-    def add_profiles_information(self, registries_bigmap, tzprofiles, wallets,
-                                 tezos_domains_owners, fxhash_usernames):
+    def add_profiles_information(self, registries_bigmap, tzprofiles,
+                                 tzkt_metadata, tezos_domains_owners,
+                                 fxhash_usernames):
         """Adds the profiles information to the users.
 
         Parameters
@@ -834,8 +857,8 @@ class TeiaUsers:
             The H=N registries bigmap.
         tzprofiles: dict
             The complete tzprofiles registered users information.
-        wallets: dict
-            The complete list of tezos wallets obtained from the TzKt API.
+        tzkt_metadata: dict
+            The users tzkt metadata.
         tezos_domains_owners: dict
             The complete list of tezos profiles owners.
         fxhash_usernames: dict
@@ -844,8 +867,8 @@ class TeiaUsers:
         """
         for address, user in self.users.items():
             user.set_profiles_information(
-                registries_bigmap, tzprofiles, wallets, tezos_domains_owners,
-                fxhash_usernames)
+                registries_bigmap, tzprofiles, tzkt_metadata,
+                tezos_domains_owners, fxhash_usernames)
 
     def add_artists_collaborations(self, artists_collaborations,
                                    artists_collaborations_signatures):

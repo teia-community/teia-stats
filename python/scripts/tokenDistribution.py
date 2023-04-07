@@ -1,5 +1,5 @@
+import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from teiaUtils.analysisUtils import read_json_file, save_json_file
 
@@ -16,6 +16,9 @@ users = users.set_index("address")
 # Change the type column data type to categorical
 users["type"] = pd.Categorical(users["type"])
 
+# Add a column to indicate if a user is a teia contributor or not
+users["contributor"] = users["contribution_level"] > 0
+
 # Remove restricted users and drop the restricted column after that
 users = users[users["restricted"] == False]
 users = users.drop("restricted", axis=1)
@@ -26,54 +29,65 @@ users.info()
 # Check how many users we have of each type
 users["type"].value_counts()
 
-# Define the total number of TEIA tokens to distribute between users based on
-# their activity
-total_activity_amount = 1.5e6
-
 # Calculate the TEIA token scaling factor based on the users registration info
-# and the days they have been active at the site
-sf = (1 + 0.5 * users["has_profile"] + 0.5 * users["verified"])
-sf[users["active_days"] < 7] = 0
-sf[users["contribution_level"] == 1] = 5
-sf[users["contribution_level"] == 2] = 8
+sf = np.ones(len(users))
+sf[users["has_profile"]] = 2
+sf[users["verified"]] = 3
+
+# Filter possible bots and very inactive users
+sf[(users["active_days"] < 14) & (users["teia_votes"] == 0) & (users["money_spent"] < 1000)] = 0
+
+# Make sure that contributors have the same factor as verified users
+sf[users["contributor"]] = 3
+
+# Save the scaling factor information in the data frame
 users["scaling_factor"] = sf
+
+# Define the total amount of tokens that will be distributed
+total_amount = 5.5e6
+
+# Define the amount of tokens reserved for the DAO treasury
+treasury_amount = 3.5e5
+
+# Define the amount of tokens to distribute between users based on their activity
+total_activity_amount = total_amount - treasury_amount - users["hdao"].sum()
 
 # Calculate the TEIA tokens that users will get based on their activity
 amount = sf * users["active_days"]
-users["activity_amount"] = 0.18 * total_activity_amount * amount / amount.sum()
+users["activity_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their Teia activity
 amount = sf * users["teia_active_days"]
-users["teia_activity_amount"] = 0.11 * total_activity_amount * amount / amount.sum()
+users["teia_activity_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get because they participated in
 # the last Teia votes
 amount = sf * users["teia_votes"].pow(0.5)
-users["voting_amount"] = 0.14 * total_activity_amount * amount / amount.sum()
+users["voting_amount"] = 0.10 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their minted OBJKTs
 amount = sf * users["minted_objkts"].pow(0.5)
-users["minting_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
+users["minting_amount"] = 0.06 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their collected OBJKTs
 amount = sf * users["collected_objkts"] .pow(0.5)
-users["collecting_amount"] = 0.11 * total_activity_amount * amount / amount.sum()
+users["collecting_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their connections
 amount = sf * users["connections_to_users"].pow(0.5)
-users["connections_amount"] = 0.18 * total_activity_amount * amount / amount.sum()
+users["connections_amount"] = 0.06 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that artists will get based on their earnings
 amount = sf * (~users["wash_trader"]) * users["money_earned_own_objkts"].pow(0.5)
-users["earnings_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
+users["earnings_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that collectors will get based on their spending
 amount = sf * (~users["wash_trader"]) * users["money_spent"].pow(0.5)
-users["spending_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
+users["spending_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their contribution level
 amount = sf * users["contribution_level"]
-users["contribution_amount"] = 0.04 * total_activity_amount * amount / amount.sum()
+users["contribution_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their hDAO
 amount = users["hdao"]
@@ -97,34 +111,52 @@ users = users.sort_values(by="total_amount", ascending=False)
 
 # Print the top 50 TEIA token owners
 columns = [
-    "username", "type", "twitter", "verified", "hdao", "activity_amount",
-    "teia_activity_amount", "voting_amount", "minting_amount",
-    "collecting_amount", "connections_amount", "earnings_amount",
-    "spending_amount", "contribution_amount", "hdao_amount", "total_amount"]
+    "username", "type", "contributor", "twitter", "verified", "hdao",
+    "activity_amount", "teia_activity_amount", "voting_amount",
+    "minting_amount", "collecting_amount", "connections_amount",
+    "earnings_amount", "spending_amount", "contribution_amount", "hdao_amount",
+    "total_amount"]
 users[columns][:50]
-
-# Plot a histogram of the total amount of TEIA tokens per each user
-cond = (users["total_amount"] > 0) & (users["total_amount"] < 400)
-users[cond].hist("total_amount", bins=100)
-plt.show()
 
 # Save the data into a csv file
 columns_to_save = [
-    "username", "type", "twitter", "verified", "has_profile", "hdao",
-    "contribution_level", "first_activity", "last_activity", "active_days",
-    "teia_active_days", "minted_objkts", "collected_objkts", "swapped_objkts",
-    "money_earned_own_objkts", "money_earned_other_objkts", "money_earned",
-    "money_spent", "collaborations", "connections_to_artists",
+    "username", "type", "contributor", "contribution_level", "twitter",
+    "verified", "has_profile", "hdao", "first_activity", "last_activity",
+    "active_days", "teia_active_days", "minted_objkts", "collected_objkts",
+    "swapped_objkts", "money_earned_own_objkts", "money_earned_other_objkts",
+    "money_earned", "money_spent", "collaborations", "connections_to_artists",
     "connections_to_collectors", "connections_to_users", "teia_votes",
     "scaling_factor", "activity_amount", "teia_activity_amount",
     "voting_amount", "minting_amount", "collecting_amount",
     "connections_amount", "earnings_amount", "spending_amount",
     "contribution_amount", "hdao_amount", "total_amount"]
-users[columns_to_save].to_csv("../data/token_distribution_15.csv")
+users[columns_to_save].to_csv("../data/token_distribution_C_5p5.csv")
 
 
 
+cond = (users["active_days"] > 90) & (users["scaling_factor"] == 3) & (users["teia_votes"] > 0)
+print("%30s %5i" % ("users:", cond.sum()))
+print()
 
+ccolumns = ["activity_amount", "teia_activity_amount",
+    "voting_amount", "minting_amount", "collecting_amount",
+    "connections_amount", "earnings_amount", "spending_amount",
+    "contribution_amount", "hdao_amount", "total_activity_amount", "total_amount"]
+for c in ccolumns:
+    print("%30s %5i %5i %5i %5.1f%%" % (c, np.min(users[c][cond]), np.median(users[c][cond]),np.max(users[c][cond]),100*users[c][cond].sum()/users[c].sum()))
+
+
+
+cond = (users["active_days"] > 50) & (users["scaling_factor"] >= 2)
+print("%30s %5i" % ("users:", cond.sum()))
+print()
+
+ccolumns = ["activity_amount", "teia_activity_amount",
+    "voting_amount", "minting_amount", "collecting_amount",
+    "connections_amount", "earnings_amount", "spending_amount",
+    "contribution_amount", "hdao_amount", "total_activity_amount", "total_amount"]
+for c in ccolumns:
+    print("%30s %5i %5i %5i %5.1f%%" % (c, np.min(users[c][cond]), np.median(users[c][cond]),np.max(users[c][cond]),100*users[c][cond].sum()/users[c].sum()))
 
 
 """

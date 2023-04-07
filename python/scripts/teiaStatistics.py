@@ -18,7 +18,7 @@ figures_dir = "../figures"
 exclude_last_day = True
 
 # Get the complete list of tezos wallets
-wallets = get_tezos_wallets(wallets_dir, sleep_time=10)
+wallets = get_tezos_wallets(wallets_dir, sleep_time=2)
 
 # Get the complete list of tzprofiles
 tzprofiles = get_tzprofiles(sleep_time=1)
@@ -30,22 +30,22 @@ tezos_domains_owners = get_tezos_domains_owners(sleep_time=1)
 fxhash_usernames = get_fxhash_usernames(transactions_dir)
 
 # Get the complete list of H=N mint, collect, swap and cancel swap transactions
-hen_mints = get_all_transactions("mint", transactions_dir, sleep_time=10)
-hen_mint_objkts = get_all_transactions("mint_OBJKT", transactions_dir, sleep_time=10)
-hen_collects = get_all_transactions("hen_collect", transactions_dir, sleep_time=10)
-hen_swaps = get_all_transactions("hen_swap", transactions_dir, sleep_time=10)
-hen_cancel_swaps = get_all_transactions("hen_cancel_swap", transactions_dir, sleep_time=10)
+hen_mints = get_all_transactions("mint", transactions_dir, sleep_time=2)
+hen_mint_objkts = get_all_transactions("mint_OBJKT", transactions_dir, sleep_time=2)
+hen_collects = get_all_transactions("hen_collect", transactions_dir, sleep_time=2)
+hen_swaps = get_all_transactions("hen_swap", transactions_dir, sleep_time=2)
+hen_cancel_swaps = get_all_transactions("hen_cancel_swap", transactions_dir, sleep_time=2)
 
 # Get the complete list of Teia collect, swap and cancel swap transactions
-teia_collects = get_all_transactions("teia_collect", transactions_dir, sleep_time=10)
-teia_swaps = get_all_transactions("teia_swap", transactions_dir, sleep_time=10)
-teia_cancel_swaps = get_all_transactions("teia_cancel_swap", transactions_dir, sleep_time=10)
+teia_collects = get_all_transactions("teia_collect", transactions_dir, sleep_time=2)
+teia_swaps = get_all_transactions("teia_swap", transactions_dir, sleep_time=2)
+teia_cancel_swaps = get_all_transactions("teia_cancel_swap", transactions_dir, sleep_time=2)
 
 # Get the H=N bigmaps
-hen_swaps_bigmap = get_hen_bigmap("swaps", transactions_dir, sleep_time=10)
-hen_royalties_bigmap = get_hen_bigmap("royalties", transactions_dir, sleep_time=10)
-hen_registries_bigmap = get_hen_bigmap("registries", transactions_dir, sleep_time=10)
-hen_subjkts_metadata_bigmap = get_hen_bigmap("subjkts metadata", transactions_dir, sleep_time=10)
+hen_swaps_bigmap = get_hen_bigmap("swaps", transactions_dir, sleep_time=2)
+hen_royalties_bigmap = get_hen_bigmap("royalties", transactions_dir, sleep_time=2)
+hen_registries_bigmap = get_hen_bigmap("registries", transactions_dir, sleep_time=2)
+hen_subjkts_metadata_bigmap = get_hen_bigmap("subjkts metadata", transactions_dir, sleep_time=2)
 
 # Get the Teia swaps bigmap
 teia_swaps_bigmap = get_teia_bigmap("swaps", transactions_dir, sleep_time=10)
@@ -55,7 +55,7 @@ artists_collaborations = get_artists_collaborations()
 artists_collaborations_signatures = get_artists_collaborations_signatures()
 
 # Get the hDAO snapshot information
-hdao_snapshot_level = 2361351
+hdao_snapshot_level = 3263366
 hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
 # Get the users contribution levels
@@ -74,7 +74,7 @@ users.add_swap_transactions(teia_swaps)
 # Include also the hDAO owners
 users.add_hdao_information(hdao_snapshot, hdao_snapshot_level)
 
-# Add the users collaboration levels
+# Add the users contribution levels
 users.add_contribution_level_information(contribution_levels)
 
 # Add the restricted wallets information
@@ -103,8 +103,9 @@ wash_trading_addresses = [
 users.add_wash_trading_addresses_information(wash_trading_addresses)
 
 # Add the profiles information
+tzkt_metadata = get_users_tzkt_metadata(wallets_dir, users)
 users.add_profiles_information(
-    hen_registries_bigmap, tzprofiles, wallets, tezos_domains_owners, fxhash_usernames)
+    hen_registries_bigmap, tzprofiles, tzkt_metadata, tezos_domains_owners, fxhash_usernames)
 
 # Add the Teia Community votes information
 votes = get_teia_community_votes()
