@@ -3,7 +3,7 @@ import pandas as pd
 from teiaUtils.analysisUtils import save_json_file
 
 # Download the hDAO snapshot information from google docs
-hdao_snapshot_level = "3263366"
+hdao_snapshot_level = "3400856"
 key = "1-a59_41HG_ia1NAsqKJPoENfyv2sJeOzvACTlPn2hWI"
 gid = "2015593363"
 url = "https://docs.google.com/spreadsheet/ccc?key=%s&gid=%s&output=csv" % (key, gid)
