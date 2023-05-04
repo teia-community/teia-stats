@@ -55,11 +55,11 @@ artists_collaborations = get_artists_collaborations()
 artists_collaborations_signatures = get_artists_collaborations_signatures()
 
 # Get the hDAO snapshot information
-hdao_snapshot_level = 3263366
+hdao_snapshot_level = 3400856
 hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_level)
 
-# Get the users contribution levels
-contribution_levels = read_csv_file("../data/teiaContributionLevels.csv")
+# Get the teia contribution levels
+contribution_levels = read_csv_file("../data/teia_contribution_levels.csv")
 contribution_levels = contribution_levels.set_index("address")
 contribution_levels = contribution_levels.to_dict()["level"]
 
@@ -89,7 +89,10 @@ wash_trading_addresses = [
     "tz1bhMc5uPJynkrHpw7pAiBt6YMhQktn7owF",  # hDAO wash trading
     "tz1VWBwFKLq6TCrPEVU8sZDfrcbx9buqMxnZ",  # hDAO wash trading
     "tz1e52CpddrybiDgawzvqRPXthy2hbAWGJba",  # hDAO wash trading
+    "tz1dXpsNAWLHVYNWSqhrHCHT6wh6L1fKZfo1",  # hDAO wash trading
+    "tz1NufWtpqS3nfR8VW1xFyWq4GWqb969keeR",  # hDAO wash trading
     "tz1Uby674S4xEw8w7iuM3GEkWZ3fHeHjT696",  # hDAO wash trading
+    "tz1NM2GD7d8L9oYurYSy3R1Cy7ZAU1ExDyC6",  # hDAO wash trading
     "tz1U3YJZ1pFfkaUWZVWv7FvNyiUi5vKYG696",  # hDAO wash trading
     "tz1Us9HFxfVZUZ5rn1Y9gYh3LkiS9nEDGmZS",  # hDAO wash trading
     "tz1f7zNRyNpBbNRx9xa4jW6XYgZdSYMH777n",  # Suspicious swaps/collects
