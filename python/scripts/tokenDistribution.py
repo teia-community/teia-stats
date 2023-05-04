@@ -44,7 +44,7 @@ sf[users["contributor"]] = 3
 users["scaling_factor"] = sf
 
 # Define the total amount of tokens that will be distributed
-total_amount = 5.5e6
+total_amount = 6.0e6
 
 # Define the amount of tokens reserved for the DAO treasury
 treasury_amount = 3.5e5
@@ -67,7 +67,7 @@ users["voting_amount"] = 0.10 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their minted OBJKTs
 amount = sf * users["minted_objkts"].pow(0.5)
-users["minting_amount"] = 0.06 * total_activity_amount * amount / amount.sum()
+users["minting_amount"] = 0.07 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that users will get based on their collected OBJKTs
 amount = sf * users["collected_objkts"] .pow(0.5)
@@ -75,7 +75,7 @@ users["collecting_amount"] = 0.08 * total_activity_amount * amount / amount.sum(
 
 # Calculate the TEIA tokens that users will get based on their connections
 amount = sf * users["connections_to_users"].pow(0.5)
-users["connections_amount"] = 0.06 * total_activity_amount * amount / amount.sum()
+users["connections_amount"] = 0.07 * total_activity_amount * amount / amount.sum()
 
 # Calculate the TEIA tokens that artists will get based on their earnings
 amount = sf * (~users["wash_trader"]) * users["money_earned_own_objkts"].pow(0.5)
@@ -130,11 +130,21 @@ columns_to_save = [
     "voting_amount", "minting_amount", "collecting_amount",
     "connections_amount", "earnings_amount", "spending_amount",
     "contribution_amount", "hdao_amount", "total_amount"]
-users[columns_to_save].to_csv("../data/token_distribution_C_5p5.csv")
+users[columns_to_save].to_csv("../data/token_distribution_6M.csv")
 
 
 
-cond = (users["active_days"] > 90) & (users["scaling_factor"] == 3) & (users["teia_votes"] > 0)
+
+
+
+
+
+
+
+
+
+
+cond = (users["active_days"] > 50) & (users["scaling_factor"] == 3) & (users["teia_votes"] > 0)
 print("%30s %5i" % ("users:", cond.sum()))
 print()
 
@@ -147,7 +157,7 @@ for c in ccolumns:
 
 
 
-cond = (users["active_days"] > 50) & (users["scaling_factor"] >= 2)
+cond = (users["active_days"] > 50) & (users["scaling_factor"] == 3)
 print("%30s %5i" % ("users:", cond.sum()))
 print()
 
