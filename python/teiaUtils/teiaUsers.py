@@ -45,6 +45,7 @@ class TeiaUser:
 
         # Activity information
         self.contribution_level = 0
+        self.contribution_type = ""
         self.first_activity = None
         self.last_activity = None
         self.first_mint = None
@@ -124,20 +125,21 @@ class TeiaUser:
         self.hdao = hdao
         self.hdao_snapshot_level = level
 
-    def set_contribution_level(self, level):
-        """Sets the user teia contribution level.
+    def set_contribution_level(self, contribution):
+        """Sets the user teia contribution level and type.
 
         Parameters
         ----------
-        level: int
-            The user contribution level.
+        contribution: dict
+            The user contribution.
 
         """
         # Set the user type as contributor if it has not type defined
         if self.type is None:
             self.type = "contributor"
 
-        self.contribution_level = level
+        self.contribution_level = contribution["level"]
+        self.contribution_type = contribution["type"]
 
     def set_profiles_information(self, registries_bigmap, tzprofiles,
                                  tzkt_metadata, tezos_domains_owners,
@@ -812,7 +814,7 @@ class TeiaUsers:
             The contribution level for the most active users.
 
         """
-        for address, level in contribution_levels.items():
+        for address, contribution in contribution_levels.items():
             # Add a new user if the address is new
             if address not in self.users:
                 id = len(self.users)
@@ -820,7 +822,7 @@ class TeiaUsers:
                 self.id_to_address[id] = address
 
             # Set the user contribution level
-            self.users[address].set_contribution_level(level)
+            self.users[address].set_contribution_level(contribution)
 
     def add_restricted_addresses_information(self, restricted_addresses):
         """Adds the restricted addresses information to the users.
@@ -1066,19 +1068,20 @@ class TeiaUsers:
             "restricted", "wash_trader", "verified", "has_profile",
             "has_tzprofile", "has_hen_profile", "has_tzkt_profile",
             "has_fxhash_profile", "hdao", "contribution_level",
-            "first_activity", "last_activity", "first_mint", "last_mint",
-            "first_collect", "last_collect", "first_swap", "last_swap",
-            "activity_period", "active_days", "teia_active_days",
-            "minted_objkts", "collected_objkts", "swapped_objkts",
-            "money_earned_own_objkts", "money_earned_collaborations_objkts",
-            "money_earned_other_objkts", "money_earned", "money_spent",
-            "collaborations", "connections_to_artists",
-            "connections_to_collectors", "connections_to_users", "teia_votes"]
+            "contribution_type", "first_activity", "last_activity",
+            "first_mint", "last_mint", "first_collect", "last_collect",
+            "first_swap", "last_swap", "activity_period", "active_days",
+            "teia_active_days", "minted_objkts", "collected_objkts",
+            "swapped_objkts", "money_earned_own_objkts",
+            "money_earned_collaborations_objkts", "money_earned_other_objkts",
+            "money_earned", "money_spent", "collaborations",
+            "connections_to_artists", "connections_to_collectors",
+            "connections_to_users", "teia_votes"]
         format = [
             "%s", "%s", "%s", "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r",
             "%r", "%r", "%r", "%f", "%i", "%s", "%s", "%s", "%s", "%s", "%s",
-            "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%i", "%f", "%f", "%f",
-            "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
+            "%s", "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%i", "%f", "%f",
+            "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -1154,6 +1157,7 @@ class TeiaUsers:
                     user.fxhash_username is not None,
                     user.hdao / 1e6,
                     user.contribution_level,
+                    user.contribution_type,
                     first_activity,
                     last_activity,
                     first_mint,

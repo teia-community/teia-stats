@@ -44,7 +44,7 @@ sf[users["contributor"]] = 3
 users["scaling_factor"] = sf
 
 # Define the total amount of tokens that will be distributed
-total_amount = 6.0e6
+total_amount = 8.0e6
 
 # Define the amount of tokens reserved for the DAO treasury
 treasury_amount = 3.5e5
@@ -130,43 +130,16 @@ columns_to_save = [
     "voting_amount", "minting_amount", "collecting_amount",
     "connections_amount", "earnings_amount", "spending_amount",
     "contribution_amount", "hdao_amount", "total_amount"]
-users[columns_to_save].to_csv("../data/token_distribution_6M.csv")
+users[columns_to_save].to_csv("../data/token_distribution_8M.csv")
 
 
 
 
 
 
-
-
-
-
-
-
-
-cond = (users["active_days"] > 50) & (users["scaling_factor"] == 3) & (users["teia_votes"] > 0)
-print("%30s %5i" % ("users:", cond.sum()))
-print()
-
-ccolumns = ["activity_amount", "teia_activity_amount",
-    "voting_amount", "minting_amount", "collecting_amount",
-    "connections_amount", "earnings_amount", "spending_amount",
-    "contribution_amount", "hdao_amount", "total_activity_amount", "total_amount"]
-for c in ccolumns:
-    print("%30s %5i %5i %5i %5.1f%%" % (c, np.min(users[c][cond]), np.median(users[c][cond]),np.max(users[c][cond]),100*users[c][cond].sum()/users[c].sum()))
-
-
-
-cond = (users["active_days"] > 50) & (users["scaling_factor"] == 3)
-print("%30s %5i" % ("users:", cond.sum()))
-print()
-
-ccolumns = ["activity_amount", "teia_activity_amount",
-    "voting_amount", "minting_amount", "collecting_amount",
-    "connections_amount", "earnings_amount", "spending_amount",
-    "contribution_amount", "hdao_amount", "total_activity_amount", "total_amount"]
-for c in ccolumns:
-    print("%30s %5i %5i %5i %5.1f%%" % (c, np.min(users[c][cond]), np.median(users[c][cond]),np.max(users[c][cond]),100*users[c][cond].sum()/users[c].sum()))
+cond = (users["total_amount"] >= 1) | (users["teia_active_days"] >= 1)
+users_to_vote = users[cond]
+save_json_file("../data/teia_and_hen_users_snapshot_17-05-2023.json", users_to_vote.index.array.tolist())
 
 
 """

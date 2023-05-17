@@ -61,7 +61,7 @@ hdao_snapshot = read_json_file("../data/hdao_snapshot_%s.json" % hdao_snapshot_l
 # Get the teia contribution levels
 contribution_levels = read_csv_file("../data/teia_contribution_levels.csv")
 contribution_levels = contribution_levels.set_index("address")
-contribution_levels = contribution_levels.to_dict()["level"]
+contribution_levels = contribution_levels.to_dict("index")
 
 # Get the Teia users from the mint, collect and swap transactions
 users = TeiaUsers()

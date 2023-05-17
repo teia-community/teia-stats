@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 .settings
-data/*.csv
+data/token_distribution_*.csv
