@@ -102,7 +102,7 @@ users["total_activity_amount"] = (
     users["collecting_amount"] + 
     users["connections_amount"] + 
     users["earnings_amount"] + 
-    users["spending_amount"] +
+    users["spending_amount"] + 
     users["contribution_amount"])
 users["total_amount"] = users["total_activity_amount"] + users["hdao_amount"]
 
@@ -132,58 +132,23 @@ columns_to_save = [
     "contribution_amount", "hdao_amount", "total_amount"]
 users[columns_to_save].to_csv("../data/token_distribution_8M.csv")
 
-
-
-
-
-
-cond = (users["total_amount"] >= 1) | (users["teia_active_days"] >= 1)
-users_to_vote = users[cond]
-save_json_file("../data/teia_and_hen_users_snapshot_17-05-2023.json", users_to_vote.index.array.tolist())
-
-
-"""
-file_name = "/home/jgracia/drop.ts"
-total = 0
-
-with open(file_name, "w") as file:
+# Save the data with a format that can be used to create a Merkle tree
+with open("../data/merkle_tree_input_8M.ts", "w") as file:
     file.write("// Modify data according to your drop\n")
     file.write("// Data specification:\n")
     file.write("// Tezos address => Number of tokens to receive (including token decimals)\n")
     file.write("const data: { [key: string]: string } = {\n")
 
-    # Loop over the users
     for wallet, total_amount in zip(users.index, users["total_amount"]):
         if int(total_amount * 1e6) > 0:
-            file.write('   %s: "%i",\n' % (wallet, total_amount * 1e6))
-            total += total_amount * 1e6
+            file.write("    %s: '%i',\n" % (wallet, total_amount * 1e6))
 
     file.write("};\n")
     file.write("\n")
     file.write("export default data;\n")
 
-merkle_data = read_json_file(
-    "/home/jgracia/github/token-drop-template/deploy/src/merkle_build/mrklData.json")
-addresses = list(merkle_data.keys())
-
-batch_size = 4000
-counter = 0
-start = 0
-end = min(batch_size, len(addresses))
-mapping = {}
-
-while start < len(addresses):
-    data_batch = {}
-
-    for address in addresses[start:end]:
-        mapping[address] = counter
-        data_batch[address] = merkle_data[address]
-
-    file_name = "/home/jgracia/merkle_data_%i_%i.json" % (start, end)
-    save_json_file(file_name, data_batch, compact=True)
-    start = end
-    end = min(start + batch_size, len(addresses)) 
-    counter += 1
-
-save_json_file("/home/jgracia/mapping.json", mapping, compact=True)
-"""
+# Save a snapshot for the next teia voting
+cond = (users["total_amount"] >= 1) | (users["teia_active_days"] >= 3)
+users_to_vote = users[cond]
+len(users_to_vote)
+save_json_file("../data/teia_and_hen_users_snapshot_17-05-2023.json", users_to_vote.index.array.tolist())
