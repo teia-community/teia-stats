@@ -1,16 +1,20 @@
 import json
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 
 def get_query_result(query, timeout=10):
-    with urlopen(query, timeout=timeout) as request:
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.3"}
+
+    with urlopen(Request(query, headers=headers), timeout=timeout) as request:
         if request.status == 200:
             return json.loads(request.read().decode())
 
 # Get the list of users allowed to vote
-hen_users = get_query_result("https://vote.hencommunity.quest/teia_and_hen_users_snapshot_13-10-2022.json")
+teia_users = get_query_result(
+    "https://cache.teia.rocks/ipfs/QmNihShvZkXq7aoSSH3Nt1VeLjgGkESr3LoCzShNyV4uzp")
 
 # Get the poll information from ipfs
-poll_id = "QmQdgL954By1DNuam2abaQd4B8o9UzWaJgrfsK9xjabWQg"
+poll_id = "QmeJ9ATjn4ge9phDzvpmdZzRZdRoKJdyk4swPiVgaxAx6z"
 poll_information = get_query_result("https://infura-ipfs.io/ipfs/" + poll_id)
 
 if poll_information["multi"] == "false":
@@ -20,14 +24,14 @@ if poll_information["multi"] == "false":
 # Get the votes associated to the poll
 all_votes = get_query_result("https://api.mainnet.tzkt.io/v1/bigmaps/64367/keys?limit=10000&key.string=" + poll_id)
 
-# Select only those votes that come from H=N users wallets
-valid_votes = [vote for vote in all_votes if vote["key"]["address"] in hen_users]
+# Select only those votes that come from teia users wallets
+valid_votes = [vote for vote in all_votes if vote["key"]["address"] in teia_users]
 print("")
-print("%4i H=N and teia users have voted so far." % len(valid_votes))
-print("%4i votes were invalid because they didn't come from a wallet in the H=N users list." % (len(all_votes) - len(valid_votes)))
+print("%4i teia users have voted so far." % len(valid_votes))
+print("%4i votes were invalid because they didn't come from a wallet in the teia users list." % (len(all_votes) - len(valid_votes)))
 
 # Initialize the results dictionary taking the names from the poll information
-results = {str(i): {"name": poll_information["opt" + str(i)], "votes": 0} for i in range(1, 3)}
+results = {str(i): {"name": poll_information["opt" + str(i)], "votes": 0} for i in range(1, 4)}
 
 # Count the valid votes
 for vote in valid_votes:
