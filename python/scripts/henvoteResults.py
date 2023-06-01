@@ -15,7 +15,7 @@ teia_users = get_query_result(
 
 # Get the poll information from ipfs
 poll_id = "QmeJ9ATjn4ge9phDzvpmdZzRZdRoKJdyk4swPiVgaxAx6z"
-poll_information = get_query_result("https://infura-ipfs.io/ipfs/" + poll_id)
+poll_information = get_query_result("https://cache.teia.rocks/ipfs/" + poll_id)
 
 if poll_information["multi"] == "false":
     poll_information["opt1"] = "YES"
