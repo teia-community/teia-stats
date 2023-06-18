@@ -56,15 +56,3 @@ for vote in valid_votes:
 print("")
 print(" You didn't vote" if your_vote is None else " You voted for %s" % your_vote)
 print("")
-
-total_amount = 0
-total_hdao = 0
-for vote in valid_votes:
-    u = users.loc[vote["key"]["address"]]
-    total_amount += u["total_amount"]
-    total_hdao += u["hdao"]
-    if vote["value"] == "1":
-        print("%60s  %8i  %8i" % (u["username"], u["hdao"], u["total_amount"]))
-print("total hDAO", total_hdao)
-print("total amount", total_amount)
-
