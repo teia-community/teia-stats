@@ -115,7 +115,8 @@ votes = get_teia_community_votes()
 polls = ["QmU7zZepzHiLMUme1xRHZyTdbyD4j2EfUodiGJeA1Rv6QQ",
          "QmVSWZZcBT6zRrcZM6hf9VZJ7Qha5GXUBScQowJJ7fYQxT",
          "QmPDYWmGdxae8gUxqiPa4rkuQCc8P6sggLvUi5HQrrCzug",
-         "QmQdgL954By1DNuam2abaQd4B8o9UzWaJgrfsK9xjabWQg"]
+         "QmQdgL954By1DNuam2abaQd4B8o9UzWaJgrfsK9xjabWQg",
+         "QmeJ9ATjn4ge9phDzvpmdZzRZdRoKJdyk4swPiVgaxAx6z"]
 users.add_teia_community_votes(votes, polls)
 
 # Add the artists collaborations information
@@ -136,7 +137,9 @@ restricted = users.select("restricted")
 wash_traders = users.select("wash_traders")
 
 # Save as a csv file the complete list of users, excluding contracts
-users.select("not_contract").save_as_csv_file("../data/teia_users.csv")
+users.select("not_contract").save_as_csv_file(
+    "../data/teia_users.csv",
+    token_supply_poll="QmeJ9ATjn4ge9phDzvpmdZzRZdRoKJdyk4swPiVgaxAx6z")
 
 # Print some information about the total number of users
 print("There are currently %i H=N and Teia users." % (

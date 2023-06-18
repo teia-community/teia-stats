@@ -1,7 +1,7 @@
 import json
 from urllib.request import urlopen, Request
 
-def get_query_result(query, timeout=10):
+def get_query_result(query, timeout=60):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.3"}
 
@@ -27,8 +27,8 @@ all_votes = get_query_result("https://api.mainnet.tzkt.io/v1/bigmaps/64367/keys?
 # Select only those votes that come from teia users wallets
 valid_votes = [vote for vote in all_votes if vote["key"]["address"] in teia_users]
 print("")
-print("%4i teia users have voted so far." % len(valid_votes))
-print("%4i votes were invalid because they didn't come from a wallet in the teia users list." % (len(all_votes) - len(valid_votes)))
+print(" %4i teia users have voted so far." % len(valid_votes))
+print(" %4i votes were invalid because they didn't come from a wallet in the teia users list." % (len(all_votes) - len(valid_votes)))
 
 # Initialize the results dictionary taking the names from the poll information
 results = {str(i): {"name": poll_information["opt" + str(i)], "votes": 0} for i in range(1, 4)}
@@ -39,11 +39,11 @@ for vote in valid_votes:
 
 # Print the results
 print("")
-print("Preliminary results:")
+print(" Preliminary results:")
 print("")
 
 for entry in results.values():
-    print("%10s: %4i votes (%4.1f%%)" % (entry["name"], entry["votes"], entry["votes"] * 100 / len(valid_votes)))
+    print(" %10s: %4i votes (%4.1f%%)" % (entry["name"], entry["votes"], entry["votes"] * 100 / len(valid_votes)))
 
 # Verify your vote
 your_wallet = "tz1g6JRCpsEnD2BLiAzPNK3GBD1fKicV9rCx"  ## You need to edit this with your address
@@ -54,5 +54,17 @@ for vote in valid_votes:
         your_vote = results[vote["value"]]["name"]
 
 print("")
-print("You didn't vote" if your_vote is None else "You voted for %s" % your_vote)
+print(" You didn't vote" if your_vote is None else " You voted for %s" % your_vote)
 print("")
+
+total_amount = 0
+total_hdao = 0
+for vote in valid_votes:
+    u = users.loc[vote["key"]["address"]]
+    total_amount += u["total_amount"]
+    total_hdao += u["hdao"]
+    if vote["value"] == "1":
+        print("%60s  %8i  %8i" % (u["username"], u["hdao"], u["total_amount"]))
+print("total hDAO", total_hdao)
+print("total amount", total_amount)
+

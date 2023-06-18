@@ -46,11 +46,14 @@ users["scaling_factor"] = sf
 # Define the total amount of tokens that will be distributed
 total_amount = 8.0e6
 
+# Define the tokens that should be given to users that participated in the token total supply vote
+token_supply_vote_amount = 0.5e5
+
 # Define the amount of tokens reserved for the DAO treasury
-treasury_amount = 3.5e5
+treasury_amount = 3.0e5
 
 # Define the amount of tokens to distribute between users based on their activity
-total_activity_amount = total_amount - treasury_amount - users["hdao"].sum()
+total_activity_amount = total_amount - token_supply_vote_amount - treasury_amount - users["hdao"][~users["wash_trader"]].sum()
 
 # Calculate the TEIA tokens that users will get based on their activity
 amount = sf * users["active_days"]
@@ -89,8 +92,12 @@ users["spending_amount"] = 0.15 * total_activity_amount * amount / amount.sum()
 amount = sf * users["contribution_level"]
 users["contribution_amount"] = 0.08 * total_activity_amount * amount / amount.sum()
 
+# Calculate the TEIA tokens that users will get from their participation in the total supply vote
+amount = users["token_supply_vote"] * token_supply_vote_amount / users["token_supply_vote"].sum()
+users["token_supply_vote_amount"] = amount
+
 # Calculate the TEIA tokens that users will get based on their hDAO
-amount = users["hdao"]
+amount =  (~users["wash_trader"]) * users["hdao"]
 users["hdao_amount"] = amount
 
 # Combine all the TEIA token amounts
@@ -103,7 +110,8 @@ users["total_activity_amount"] = (
     users["connections_amount"] + 
     users["earnings_amount"] + 
     users["spending_amount"] + 
-    users["contribution_amount"])
+    users["contribution_amount"] +
+    users["token_supply_vote_amount"])
 users["total_amount"] = users["total_activity_amount"] + users["hdao_amount"]
 
 # Order the users data by the total amount of TEIA tokens that they will receive
@@ -114,8 +122,8 @@ columns = [
     "username", "type", "contributor", "twitter", "verified", "hdao",
     "activity_amount", "teia_activity_amount", "voting_amount",
     "minting_amount", "collecting_amount", "connections_amount",
-    "earnings_amount", "spending_amount", "contribution_amount", "hdao_amount",
-    "total_amount"]
+    "earnings_amount", "spending_amount", "contribution_amount", 
+    "token_supply_vote_amount","hdao_amount", "total_amount"]
 users[columns][:50]
 
 # Save the data into a csv file
@@ -129,7 +137,8 @@ columns_to_save = [
     "scaling_factor", "activity_amount", "teia_activity_amount",
     "voting_amount", "minting_amount", "collecting_amount",
     "connections_amount", "earnings_amount", "spending_amount",
-    "contribution_amount", "hdao_amount", "total_amount"]
+    "contribution_amount", "token_supply_vote_amount", "hdao_amount",
+    "total_amount"]
 users[columns_to_save].to_csv("../data/token_distribution_8M.csv")
 
 # Save the data with a format that can be used to create a Merkle tree

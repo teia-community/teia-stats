@@ -1052,7 +1052,7 @@ class TeiaUsers:
         # Return the user addresses ordered by the total money spent
         return addresses[total_money_spent.argsort()[::-1]][:n]
 
-    def save_as_csv_file(self, file_name):
+    def save_as_csv_file(self, file_name, token_supply_poll=""):
         """Saves the most relevant user information in a csv file.
 
         Parameters
@@ -1076,12 +1076,12 @@ class TeiaUsers:
             "money_earned_collaborations_objkts", "money_earned_other_objkts",
             "money_earned", "money_spent", "collaborations",
             "connections_to_artists", "connections_to_collectors",
-            "connections_to_users", "teia_votes"]
+            "connections_to_users", "teia_votes", "token_supply_vote"]
         format = [
             "%s", "%s", "%s", "%s", "%s", "%s", "%r", "%r", "%r", "%r", "%r",
             "%r", "%r", "%r", "%f", "%i", "%s", "%s", "%s", "%s", "%s", "%s",
             "%s", "%s", "%s", "%f", "%i", "%i", "%i", "%i", "%i", "%f", "%f",
-            "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i"]
+            "%f", "%f", "%f", "%i", "%i", "%i", "%i", "%i", "%r"]
 
         with open(file_name, "w") as file:
             # Write the header
@@ -1182,6 +1182,7 @@ class TeiaUsers:
                     len(user.collector_connections),
                     len(set(list(user.artist_connections.keys()) + 
                             list(user.collector_connections.keys()))),
-                    len(user.teia_community_votes))
+                    len(user.teia_community_votes),
+                    token_supply_poll in user.teia_community_votes)
                 text = ",".join(format) % data
                 file.write(text + "\n")
