@@ -13,8 +13,9 @@ users = pd.read_csv(
 # Set the user address as the index
 users = users.set_index("address")
 
-# Change the type column data type to categorical
+# Change the type and contribution type columns data type to categorical
 users["type"] = pd.Categorical(users["type"])
+users["contribution_type"] = pd.Categorical(users["contribution_type"])
 
 # Add a column to indicate if a user is a teia contributor or not
 users["contributor"] = users["contribution_level"] > 0
@@ -139,10 +140,10 @@ columns_to_save = [
     "connections_amount", "earnings_amount", "spending_amount",
     "contribution_amount", "token_supply_vote_amount", "hdao_amount",
     "total_amount"]
-users[columns_to_save].to_csv("../data/token_distribution_8M.csv")
+users[columns_to_save].to_csv("../data/token_distribution.csv")
 
 # Save the data with a format that can be used to create a Merkle tree
-with open("../data/merkle_tree_input_8M.ts", "w") as file:
+with open("../data/merkle_tree_input.ts", "w") as file:
     file.write("// Modify data according to your drop\n")
     file.write("// Data specification:\n")
     file.write("// Tezos address => Number of tokens to receive (including token decimals)\n")
