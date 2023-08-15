@@ -90,6 +90,23 @@ def hex_to_utf8(hex_string):
     return bytes.fromhex(hex_string).decode("utf-8", errors="replace")
 
 
+def utf8_to_hex(utf8_string):
+    """Transforms a utf-8 string to a hex string.
+
+    Parameters
+    ----------
+    utf8_string: str
+        The utf8 string.
+
+    Returns
+    -------
+    str
+        The hex string.
+
+    """
+    return "".join([hex(c)[2:] for c in bytes(utf8_string, "utf-8")])
+
+
 def select_keys(dictionary, keys):
     """Selects a list of keys from an input dictionary.
 
