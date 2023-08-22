@@ -518,6 +518,9 @@ def get_all_transactions(type, data_dir, batch_size=10000, sleep_time=1):
     elif type in ["teia_collect", "teia_swap", "teia_cancel_swap"]:
         contracts = ["KT1PHubm9HtyQEJ4BBpMTVomq6mhbfNZ9z5w"]
         entrypoint = type.replace("teia_", "")
+    elif type in "claim":
+        contracts = ["KT1NrfV4e2qWqFrnrKyPTJth5wq2KP9VyBei"]
+        entrypoint = type
     else:
         raise ValueError("Invalid type parameter value: %s" % type)
 
@@ -859,6 +862,8 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
             bigmap_ids = ["75550"]  # KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW
         elif token == "MATERIA":
             bigmap_ids = ["76310"]  # KT1KRvNVubq64ttPbQarxec5XdS6ZQU4DVD2
+        elif token == "TEIA":
+            bigmap_ids = ["518735"]  # KT1QrtA753MSv8VGxkDrKKyJniG5JtuHHbtV
         else:
             raise ValueError("Invalid token parameter value: %s" % token)
     elif name == "token_metadata":
@@ -886,6 +891,8 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
             bigmap_ids = ["75556"]  # KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW
         elif token == "MATERIA":
             bigmap_ids = ["76314"]  # KT1KRvNVubq64ttPbQarxec5XdS6ZQU4DVD2
+        elif token == "TEIA":
+            bigmap_ids = ["518739"]  # KT1QrtA753MSv8VGxkDrKKyJniG5JtuHHbtV
         else:
             raise ValueError("Invalid token parameter value: %s" % token)
     elif name == "operators":
@@ -913,6 +920,8 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
             bigmap_ids = ["75553"]  # KT1LjmAdYQCLBjwv4S2oFkEzyHVkomAf5MrW
         elif token == "MATERIA":
             bigmap_ids = ["76312"]  # KT1KRvNVubq64ttPbQarxec5XdS6ZQU4DVD2
+        elif token == "TEIA":
+            bigmap_ids = ["518738"]  # KT1QrtA753MSv8VGxkDrKKyJniG5JtuHHbtV
         else:
             raise ValueError("Invalid token parameter value: %s" % token)
     else:
@@ -928,7 +937,7 @@ def get_token_bigmap(name, token, data_dir, level=None, batch_size=10000,
 
     for bigmap_key in bigmap_keys:
         if isinstance(bigmap_key["key"], dict):
-            if name == "ledger" and token in ["hDAO", "MATERIA"]:
+            if name == "ledger" and token in ["hDAO", "MATERIA", "TEIA"]:
                 bigmap[bigmap_key["key"]["address"]] = bigmap_key["value"]
             else:
                 bigmap[counter] = {
